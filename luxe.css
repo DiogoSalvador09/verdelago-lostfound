@@ -39,6 +39,9 @@ html, body{
 }
 .navbar__app-name{ color: var(--sage-deep) !important; font-weight:400 !important; letter-spacing:.06em !important; }
 .navbar__divider{ background: var(--hair) !important; }
+/* style.css inverts the wordmark to white for its dark navbar — on stone that
+   makes it disappear. Show the original navy artwork. */
+.navbar__brand img{ filter: none !important; opacity: .9 !important; }
 .navbar__readonly{
   background: transparent !important; color: var(--sage-mid) !important;
   border: 1px solid var(--hair) !important; border-radius: 100px !important;
