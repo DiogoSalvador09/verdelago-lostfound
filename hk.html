@@ -39,39 +39,19 @@
       <a class="btn" id="go" href="#">Abrir</a>
     </div>
     <div id="fail" style="display:none">
-      <h1>Indisponível</h1>
+      <h1>A reiniciar…</h1>
       <div class="err">
-        Não foi possível obter o endereço da aplicação. Isto costuma resolver-se sozinho em poucos minutos.
-        <br><br>Se continuar, use a aplicação na rede do resort:
+        A aplicação está a reiniciar. Costuma demorar <b>1 a 2 minutos</b>.
+        <br><br>Toque em <b>Tentar de novo</b> daqui a um minuto.
+        <br><br>Na rede do resort funciona sempre:
         <br><b>172.27.90.228:3500/hk/new</b>
       </div>
+      <a class="btn" id="retry" href="#">Tentar de novo</a>
     </div>
     <p class="muted">Verdelago Resort — Housekeeping</p>
   </div>
 
-  <script>
-    // The resort PC publishes its current public address to link.json every few
-    // minutes (the free Cloudflare tunnel changes hostname whenever it restarts).
-    // This page always forwards to whatever is current, so the link you bookmark
-    // never goes stale.
-    var TARGET = 'hk';
-    fetch('./link.json?v=' + Date.now(), { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (d) {
-        var url = d && d[TARGET];
-        if (!url) throw new Error('sem url');
-        document.getElementById('go').href = url;
-        // Some in-app browsers block an automatic redirect; show a button as well.
-        setTimeout(function () {
-          document.getElementById('loading').style.display = 'none';
-          document.getElementById('manual').style.display = 'block';
-        }, 2500);
-        location.replace(url);
-      })
-      .catch(function () {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('fail').style.display = 'block';
-      });
-  </script>
+  <script>window.BRIDGE_TARGET = 'hk';</script>
+  <script src="./bridge.js" defer></script>
 </body>
 </html>
