@@ -48,12 +48,34 @@ function compress(file) {
   });
 }
 
+const nameKey = (s) => (s || '').trim().toLowerCase();
+
+// Every person who enters a name gets a row in `staff` — so managers can see who
+// is using the app, since when, and everything each of them has registered.
+function deviceId() {
+  try {
+    let d = localStorage.getItem('device_id');
+    if (!d) { d = 'd' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('device_id', d); }
+    return d;
+  } catch (e) { return null; }
+}
+async function recordStaff(name) {
+  const key = nameKey(name);
+  if (!key) return;
+  try {
+    await sb.from('staff').upsert(
+      { name: name.trim(), name_key: key, device_id: deviceId(), last_seen: new Date().toISOString() },
+      { onConflict: 'name_key' }
+    );
+  } catch (e) { /* never block a registration because the register failed */ }
+}
+
 // Shared insert+upload used by BOTH the manager form and the housekeeping form.
 async function createItem(fields, files) {
   const { data: row, error } = await sb.from('items').insert({
     title: fields.title, category: fields.category || guessCat(fields.title), status: 'found',
     found_location: fields.found_location || '', storage_location: fields.storage_location || '',
-    found_by: fields.found_by || '', source: fields.source || 'app',
+    found_by: fields.found_by || '', found_by_key: nameKey(fields.found_by), source: fields.source || 'app',
   }).select().single();
   if (error) throw error;
   const paths = [];
@@ -174,6 +196,82 @@ $('pills').addEventListener('click', (e) => { const p = e.target.closest('.fpill
 $('q').addEventListener('input', render);
 $('catf').addEventListener('change', render);
 
+/* ---------- Equipa: who is using the app, and what each of them registered ---------- */
+let STAFF = [];
+const fmtDay = (s) => { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? '—' : d.toLocaleDateString('pt-PT', { day:'2-digit', month:'2-digit', year:'numeric' }); };
+
+async function loadStaff() {
+  const { data } = await sb.from('staff').select('*').order('name');
+  STAFF = data || [];
+  renderTeam();
+}
+function renderTeam() {
+  const box = $('team');
+  // people who registered items but predate the register still deserve a row
+  const seen = new Map(STAFF.map(s => [s.name_key, { ...s }]));
+  for (const it of ITEMS) {
+    const k = (it.found_by || '').trim().toLowerCase();
+    if (!k) continue;
+    if (!seen.has(k)) seen.set(k, { name: it.found_by.trim(), name_key: k, first_seen: null, last_seen: null, legacy: true });
+  }
+  const people = [...seen.values()].map(p => {
+    const items = ITEMS.filter(i => (i.found_by || '').trim().toLowerCase() === p.name_key);
+    return { ...p, items };
+  }).sort((a, b) => b.items.length - a.items.length || a.name.localeCompare(b.name, 'pt'));
+
+  if (!people.length) { box.innerHTML = '<div class="empty-state" style="padding:60px 20px;"><div class="empty-state__title">Ainda ninguém registou o nome</div></div>'; return; }
+
+  box.innerHTML = people.map((p, idx) => `
+    <div class="person" data-i="${idx}">
+      <div class="person__head">
+        <span class="person__chev">›</span>
+        <span class="person__name"></span>
+        <span class="person__count">${p.items.length} ${p.items.length === 1 ? 'artigo' : 'artigos'}</span>
+        <span class="person__meta">
+          ${p.first_seen ? 'Desde ' + fmtDay(p.first_seen) : 'Registos anteriores à app'}<br>
+          ${p.last_seen ? 'Última vez ' + fmtDay(p.last_seen) : ''}
+        </span>
+      </div>
+      <div class="person__items" hidden></div>
+    </div>`).join('');
+
+  // names via textContent so a staff-entered name can never inject markup
+  box.querySelectorAll('.person').forEach((el, i) => {
+    const p = people[i];
+    el.querySelector('.person__name').textContent = p.name;
+    el.querySelector('.person__head').addEventListener('click', async () => {
+      const wrap = el.querySelector('.person__items');
+      const open = !wrap.hidden;
+      wrap.hidden = open; el.classList.toggle('person--open', !open);
+      if (!open && !wrap.dataset.filled) {
+        const paths = p.items.filter(x => x.photos && x.photos.length).map(x => x.photos[0]);
+        let signed = {};
+        if (paths.length) {
+          const { data } = await sb.storage.from('items').createSignedUrls(paths, 3600);
+          (data || []).forEach(s => { if (s.signedUrl) signed[s.path] = s.signedUrl; });
+        }
+        wrap.innerHTML = p.items.map(it => {
+          const u = it.photos && it.photos.length ? signed[it.photos[0]] : null;
+          return `<div class="pitem">${u ? `<img src="${u}" alt="">` : ''}<div class="pitem__b"><div class="pitem__t"></div><div class="pitem__d">${fmtDay(it.found_date)}${it.found_location ? ' · ' + '' : ''}</div></div></div>`;
+        }).join('');
+        wrap.querySelectorAll('.pitem').forEach((n, j) => { n.querySelector('.pitem__t').textContent = p.items[j].title || 'Artigo'; });
+        wrap.dataset.filled = '1';
+      }
+    });
+  });
+}
+$('view-seg').addEventListener('click', (e) => {
+  const t = e.target.closest('.vtab'); if (!t) return;
+  const v = t.dataset.view;
+  document.querySelectorAll('#view-seg .vtab').forEach(x => x.classList.toggle('vtab--active', x === t));
+  const showItems = v === 'items';
+  $('grid').style.display = showItems ? 'grid' : 'none';
+  $('filters').hidden = !showItems;
+  $('team').hidden = showItems;
+  $('empty').hidden = true;
+  if (showItems) render(); else loadStaff();
+});
+
 /* lightbox */
 let lbSet = [], lbIdx = 0;
 async function openLb(it) {
@@ -235,6 +333,7 @@ function showOnboard() {
     const val = ($('hk-name-input').value || picked || '').trim();
     if (!val) { $('hk-name-input').focus(); return; }
     try { localStorage.setItem('hk_name', val); } catch (e) {}
+    recordStaff(val);              // register the person the moment they identify themselves
     startHKMain(val);
   };
 }
@@ -254,6 +353,8 @@ $('hk-form').addEventListener('submit', async (e) => {
   $('hk-sending').hidden = false;
   try {
     await createItem({ title, found_location: $('hk-loc').value.trim(), found_by: name, source: 'housekeeping' }, hkFiles);
+    recordStaff(name);             // keeps last_seen current
+
     hkFiles = []; $('hk-prev').innerHTML = ''; $('hk-form').reset();
     $('hk-sending').hidden = true; $('hk-done').hidden = false;
   } catch (err) { $('hk-sending').hidden = true; alert('Não foi possível registar: ' + (err.message || err)); }
