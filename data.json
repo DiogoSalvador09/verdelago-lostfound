@@ -1,6 +1,6 @@
 {
-  "updated": "2026-07-31T16:39:31.631Z",
-  "count": 79,
+  "updated": "2026-07-31T16:47:33.945Z",
+  "count": 75,
   "items": [
     {
       "id": 128,
@@ -255,18 +255,6 @@
       ]
     },
     {
-      "id": 107,
-      "title": "Camisola Zara",
-      "description": "",
-      "category": "Clothing",
-      "found_location": "",
-      "found_date": "2026-07-20",
-      "status": "stored",
-      "images": [
-        "images/wa-1784561856760-844825.jpg"
-      ]
-    },
-    {
       "id": 106,
       "title": "Óculos",
       "description": "",
@@ -288,18 +276,6 @@
       "status": "found",
       "images": [
         "images/wa-1784560445300-83539.jpg"
-      ]
-    },
-    {
-      "id": 104,
-      "title": "Artigo de proprietário (ver foto)",
-      "description": "",
-      "category": "Other",
-      "found_location": "",
-      "found_date": "2026-07-14",
-      "status": "stored",
-      "images": [
-        "images/wa-1784035866869-86480.jpg"
       ]
     },
     {
@@ -516,18 +492,6 @@
       "status": "found",
       "images": [
         "images/wa-1782567568272-4234.jpg"
-      ]
-    },
-    {
-      "id": 84,
-      "title": "Apple Watch",
-      "description": "Apple Watch Branco sujo",
-      "category": "Jewelry & Watches",
-      "found_location": "T032 - Firmino Rocha",
-      "found_date": "2026-06-22",
-      "status": "stored",
-      "images": [
-        "images/1782134496372-337618923.jpeg"
       ]
     },
     {
@@ -759,18 +723,6 @@
       "status": "found",
       "images": [
         "images/1780869493834-26402897.jpeg"
-      ]
-    },
-    {
-      "id": 63,
-      "title": "Brincos de ouro",
-      "description": "c/out no dia 19/05",
-      "category": "Jewelry & Watches",
-      "found_location": "Alexandre Carvalho - A25",
-      "found_date": "2026-06-07",
-      "status": "stored",
-      "images": [
-        "images/1780869470091-101041789.jpeg"
       ]
     },
     {

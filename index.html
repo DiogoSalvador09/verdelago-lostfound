@@ -1,50 +1,102 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Public link works for anyone it's shared with, but we don't invite search
-       engines to index guests' belongings. Flip to "index" if you want it findable. -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Public link works for anyone it's shared with; we don't invite search engines
+       to index guests' belongings. Change to "index" to make it Google-findable. -->
   <meta name="robots" content="noindex, nofollow">
-  <title>Verdelago · Perdidos e Achados</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%232E5E4E'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='%23F4EFE6'%3EV%3C/text%3E%3C/svg%3E">
+  <title>Perdidos e Achados - Verdelago</title>
+  <link rel="icon" type="image/svg+xml" href="./icon-green.svg">
   <link rel="stylesheet" href="./style.css">
+  <style>
+    /* read-only public tweaks + lightbox (kept out of the app stylesheet) */
+    .navbar__readonly{ font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+      color:#2E5E4E; background:rgba(46,94,78,.10); padding:6px 12px; border-radius:20px; white-space:nowrap; }
+    .item-tile{ cursor:zoom-in; }
+    .lb{ position:fixed; inset:0; z-index:9998; background:rgba(15,23,20,.93); display:flex; align-items:center; justify-content:center; }
+    .lb[hidden]{ display:none; }
+    .lb__img{ max-width:92vw; max-height:80vh; border-radius:10px; box-shadow:0 12px 44px rgba(0,0,0,.5); }
+    .lb__cap{ position:absolute; bottom:22px; left:0; right:0; text-align:center; color:#fff; font-size:1rem; padding:0 16px; }
+    .lb__btn{ position:absolute; background:rgba(255,255,255,.15); color:#fff; border:none; cursor:pointer;
+      border-radius:50%; width:50px; height:50px; font-size:1.7rem; line-height:1; }
+    .lb__btn:hover{ background:rgba(255,255,255,.28); }
+    .lb__close{ top:20px; right:20px; }
+    .lb__prev{ left:16px; top:50%; transform:translateY(-50%); }
+    .lb__next{ right:16px; top:50%; transform:translateY(-50%); }
+  </style>
 </head>
 <body>
-  <header class="site-header">
-    <div class="brand">
-      <img class="brand__logo" src="./logo.svg" alt="Verdelago"
-           onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'brand__name',textContent:'VERDELAGO'}))">
-      <span class="brand__sub">Perdidos&nbsp;&amp;&nbsp;Achados</span>
+<div class="page-wrapper">
+  <nav class="navbar" style="position:fixed;">
+    <div class="navbar__inner">
+      <a href="./" class="navbar__brand">
+        <img src="./logo.svg" alt="Verdelago" style="height:28px;width:auto;">
+        <span class="navbar__divider"></span>
+        <span class="navbar__app-name">Perdidos e Achados</span>
+      </a>
+      <div class="navbar__user">
+        <span class="navbar__readonly">Consulta pública</span>
+      </div>
     </div>
-    <p class="tagline">Artigos encontrados no resort. Reconhece algo seu? Contacte a receção.</p>
-  </header>
+  </nav>
 
-  <section class="controls" aria-label="Filtros">
-    <input id="search" class="search" type="search" placeholder="Procurar (ex.: óculos, mochila, carteira…)" autocomplete="off">
-    <select id="category" class="category" aria-label="Categoria">
-      <option value="">Todas as categorias</option>
-    </select>
-  </section>
+  <main class="page-content">
+    <div class="container">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:12px;flex-wrap:wrap;">
+        <h1 style="font-size:1.55rem;font-weight:800;margin:0;letter-spacing:-0.025em;color:#0D1117;">Perdidos e Achados</h1>
+        <span id="updated" style="font-size:0.78rem;color:#8A948C;"></span>
+      </div>
 
-  <p id="status" class="status" role="status">A carregar…</p>
+      <!-- Filters + search -->
+      <form id="searchForm" onsubmit="return false;">
+        <div class="filter-bar">
+          <div class="filter-bar__pills" id="pills">
+            <a href="#" class="fpill fpill--active" data-status="">Todos <span class="fpill__n" data-count="all"></span></a>
+            <a href="#" class="fpill" data-status="found">Encontrados <span class="fpill__n" data-count="found"></span></a>
+            <a href="#" class="fpill" data-status="stored">Armazenados <span class="fpill__n" data-count="stored"></span></a>
+          </div>
+          <div class="filter-bar__search">
+            <div class="search-field">
+              <svg class="search-field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="search" class="search-field__input" placeholder="Pesquisar..." autocomplete="off">
+            </div>
+            <select id="category" class="form-select" style="max-width:145px;font-size:0.81rem;min-height:38px;border-radius:20px;border:1.5px solid #E4EBE5;flex-shrink:0;">
+              <option value="">Categoria</option>
+            </select>
+          </div>
+        </div>
+      </form>
 
-  <main id="grid" class="grid" aria-live="polite"></main>
+      <!-- Grid -->
+      <div id="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px;"></div>
 
-  <footer class="site-footer">
-    <p id="foot-claim"></p>
-    <p class="foot-meta"><span id="updated"></span></p>
-  </footer>
+      <!-- Empty state -->
+      <div id="empty" class="empty-state" style="padding:70px 20px;" hidden>
+        <svg class="empty-state__icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <div class="empty-state__title">Nenhum artigo encontrado</div>
+        <p class="empty-state__text">Tente ajustar os filtros ou a pesquisa.</p>
+      </div>
+    </div>
+  </main>
+</div>
 
-  <!-- Lightbox -->
-  <div id="lightbox" class="lightbox" hidden>
-    <button class="lightbox__close" aria-label="Fechar">&times;</button>
-    <button class="lightbox__nav lightbox__prev" aria-label="Anterior">&#8249;</button>
-    <img id="lightbox-img" class="lightbox__img" alt="">
-    <button class="lightbox__nav lightbox__next" aria-label="Seguinte">&#8250;</button>
-    <div id="lightbox-caption" class="lightbox__caption"></div>
+<footer class="footer">
+  <div class="container">
+    <p class="footer__text">Verdelago Resort &mdash; Perdidos e Achados</p>
   </div>
+</footer>
 
-  <script src="./app.js" defer></script>
+<!-- Lightbox -->
+<div id="lightbox" class="lb" hidden>
+  <button class="lb__btn lb__close" aria-label="Fechar">&times;</button>
+  <button class="lb__btn lb__prev" aria-label="Anterior">&#8249;</button>
+  <img id="lb-img" class="lb__img" alt="">
+  <button class="lb__btn lb__next" aria-label="Seguinte">&#8250;</button>
+  <div id="lb-cap" class="lb__cap"></div>
+</div>
+
+<script src="./app.js" defer></script>
 </body>
 </html>

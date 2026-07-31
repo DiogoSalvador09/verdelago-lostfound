@@ -38,7 +38,7 @@ const scan = (t) => { if (!t) return null; for (const p of PII) if (p.re.test(t)
   const res = db.exec(`
     SELECT id, title, description, category, found_location, found_date, status
     FROM items
-    WHERE status IN ('found','stored')
+    WHERE status IN ('found','stored') AND (item_type = 'lost' OR item_type IS NULL)
     ORDER BY found_date DESC, id DESC
   `);
 
@@ -56,8 +56,12 @@ const scan = (t) => { if (!t) return null; for (const p of PII) if (p.re.test(t)
     const images = [];
     for (const f of files) {
       const src = path.join(UPLOADS, f);
-      if (fs.existsSync(src)) { fs.copyFileSync(src, path.join(IMG_OUT, f)); images.push('images/' + f); imagesCopied++; }
-      else imagesMissing++;
+      const dest = path.join(IMG_OUT, f);
+      if (fs.existsSync(src)) {
+        // Photo filenames are unique, so only copy ones we don't already have.
+        if (!fs.existsSync(dest)) { fs.copyFileSync(src, dest); imagesCopied++; }
+        images.push('images/' + f);
+      } else imagesMissing++;
     }
 
     for (const field of ['title', 'description', 'found_location']) {

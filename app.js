@@ -1,147 +1,127 @@
-/* Verdelago · Perdidos e Achados — public read-only viewer.
-   Loads data.json (produced by export.js on the resort PC) and renders a
-   searchable gallery. No login, no writing: entry stays on the internal app. */
+/* Verdelago · Perdidos e Achados — public, read-only mirror of the internal
+   dashboard (the /items view). Reproduces the same .item-tile markup so it looks
+   identical; loads the privacy-safe data.json produced by export.js. No login,
+   no editing — items are entered on the internal app on the resort network. */
 
-// Edit these to show a real contact on the footer (optional).
-const CONTACT = {
-  note: 'Reconhece um artigo como seu? Contacte a receção do Verdelago Resort e indique a referência (Ref.).',
-  phone: '',              // ex.: '+351 281 531 000'
-  email: '',              // ex.: 'rececao@verdelago.com'
-};
-
-const CAT = {
-  'Clothing':            { pt: 'Roupa',                  icon: '👕' },
-  'Bags & Luggage':      { pt: 'Malas e Bagagem',        icon: '🧳' },
-  'Children Items':      { pt: 'Artigos de Criança',     icon: '🧸' },
-  'Sports Equipment':    { pt: 'Equipamento Desportivo', icon: '⚽' },
-  'Electronics':         { pt: 'Eletrónica',             icon: '🎧' },
-  'Jewelry & Watches':   { pt: 'Joalharia e Relógios',   icon: '⌚' },
-  'Documents':           { pt: 'Documentos',             icon: '📄' },
-  'Keys':                { pt: 'Chaves',                 icon: '🔑' },
-  'Toiletries':          { pt: 'Higiene',                icon: '🧴' },
-  'Books & Media':       { pt: 'Livros e Media',         icon: '📚' },
-  'Other':               { pt: 'Outros',                 icon: '📦' },
-};
-const catPT   = (c) => (CAT[c] && CAT[c].pt)   || c || 'Outros';
-const catIcon = (c) => (CAT[c] && CAT[c].icon) || '📦';
+// Same labels the dashboard uses (views/items/index.ejs).
+const SL = { found:'Encontrado', stored:'Armazenado', returned:'Devolvido', disposed:'Descartado' };
+const CL = { Clothing:'Roupa', Electronics:'Eletrónica', Documents:'Documentos', Keys:'Chaves',
+  'Bags & Luggage':'Malas e Bagagem', 'Jewelry & Watches':'Joias e Relógios', Toiletries:'Artigos de Higiene',
+  'Books & Media':'Livros e Média', 'Sports Equipment':'Equip. Desportivo', 'Children Items':'Artigos de Criança',
+  Other:'Outros' };
+const clabel = (c) => CL[c] || c || 'Outros';
 
 const el = {
   grid:     document.getElementById('grid'),
-  status:   document.getElementById('status'),
+  empty:    document.getElementById('empty'),
+  pills:    document.getElementById('pills'),
   search:   document.getElementById('search'),
   category: document.getElementById('category'),
   updated:  document.getElementById('updated'),
-  footClaim:document.getElementById('foot-claim'),
   lb:       document.getElementById('lightbox'),
-  lbImg:    document.getElementById('lightbox-img'),
-  lbCap:    document.getElementById('lightbox-caption'),
+  lbImg:    document.getElementById('lb-img'),
+  lbCap:    document.getElementById('lb-cap'),
 };
 
 let ITEMS = [];
-let lbSet = [];   // current lightbox image list
-let lbIdx = 0;
+let status = '';           // '', 'found', 'stored'
+let lbSet = [], lbIdx = 0;
 
-function fmtDate(s) {
-  if (!s) return '';
-  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+const esc = (s) => String(s == null ? '' : s);
+
+function tile(item, idx) {
+  const days = item.found_date ? Math.floor((Date.now() - new Date(item.found_date).getTime()) / 86400000) : -1;
+  const daysLeft = 90 - days;
+  const showTimer = days >= 0;
+  const tClass = daysLeft <= 7 ? 'tchip--urgent' : (daysLeft <= 30 ? 'tchip--warn' : 'tchip--ok');
+  const tLabel = daysLeft <= 0 ? 'Expirado!' : daysLeft + 'd';
+  const delay = Math.min(idx * 32, 400);
+  const img = item.images && item.images.length ? item.images[0] : null;
+
+  const a = document.createElement('div');
+  a.className = 'item-tile';
+  a.style.animationDelay = delay + 'ms';
+  a.setAttribute('role', 'button');
+  a.tabIndex = 0;
+
+  if (img) {
+    const im = document.createElement('img');
+    im.className = 'item-tile__img';
+    im.loading = 'lazy';
+    im.src = './' + img;
+    im.alt = esc(item.title);
+    a.appendChild(im);
+    const ov = document.createElement('div');
+    ov.className = 'item-tile__overlay';
+    a.appendChild(ov);
+  } else {
+    const ph = document.createElement('div');
+    ph.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;';
+    ph.innerHTML = '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+    a.appendChild(ph);
+  }
+
+  const top = document.createElement('div');
+  top.className = 'item-tile__top';
+  const badge = document.createElement('span');
+  badge.className = 'gbadge gbadge--' + esc(item.status);
+  badge.innerHTML = '<span class="gbadge__dot"></span>' + (SL[item.status] || esc(item.status));
+  top.appendChild(badge);
+  if (showTimer) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;gap:4px;align-items:center;';
+    const t = document.createElement('span');
+    t.className = 'tchip ' + tClass;
+    t.textContent = tLabel;
+    wrap.appendChild(t);
+    top.appendChild(wrap);
+  }
+  a.appendChild(top);
+
+  const bottom = document.createElement('div');
+  bottom.className = 'item-tile__bottom';
+  const title = document.createElement('div');
+  title.className = 'item-tile__title';
+  title.textContent = esc(item.title);
+  const meta = document.createElement('div');
+  meta.className = 'item-tile__meta';
+  meta.textContent = item.found_location || clabel(item.category);
+  bottom.appendChild(title);
+  bottom.appendChild(meta);
+  a.appendChild(bottom);
+
+  if (img) a.addEventListener('click', () => openLightbox(item));
+  return a;
 }
 
-function render(list) {
+function currentList() {
+  const q = el.search.value.trim().toLowerCase();
+  const cat = el.category.value;
+  return ITEMS.filter((it) => {
+    if (status && it.status !== status) return false;
+    if (cat && it.category !== cat) return false;
+    if (!q) return true;
+    return [it.title, it.description, it.found_location, it.category, clabel(it.category)]
+      .join(' ').toLowerCase().includes(q);
+  });
+}
+
+function render() {
+  const list = currentList();
   el.grid.textContent = '';
-  if (!list.length) {
-    el.status.textContent = 'Nenhum artigo corresponde à procura.';
-    return;
-  }
-  el.status.textContent = `${list.length} ${list.length === 1 ? 'artigo' : 'artigos'}`;
-
+  el.empty.hidden = list.length > 0;
+  el.grid.style.display = list.length ? 'grid' : 'none';
   const frag = document.createDocumentFragment();
-  for (const it of list) {
-    const card = document.createElement('article');
-    card.className = 'card';
-
-    // media
-    if (it.images && it.images.length) {
-      const btn = document.createElement('button');
-      btn.className = 'card__media';
-      btn.type = 'button';
-      btn.setAttribute('aria-label', 'Ver foto');
-      const img = document.createElement('img');
-      img.loading = 'lazy';
-      img.src = './' + it.images[0];
-      img.alt = it.title || 'Artigo';
-      btn.appendChild(img);
-      if (it.images.length > 1) {
-        const c = document.createElement('span');
-        c.className = 'card__count';
-        c.textContent = `1/${it.images.length}`;
-        btn.appendChild(c);
-      }
-      btn.addEventListener('click', () => openLightbox(it));
-      card.appendChild(btn);
-    } else {
-      const ph = document.createElement('div');
-      ph.className = 'card__media card__media--empty';
-      ph.textContent = catIcon(it.category);
-      card.appendChild(ph);
-    }
-
-    // body
-    const body = document.createElement('div');
-    body.className = 'card__body';
-
-    const title = document.createElement('div');
-    title.className = 'card__title';
-    title.textContent = it.title || 'Artigo';
-    body.appendChild(title);
-
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.textContent = `${catIcon(it.category)} ${catPT(it.category)}`;
-    body.appendChild(chip);
-
-    if (it.description) {
-      const d = document.createElement('p');
-      d.className = 'card__desc';
-      d.textContent = it.description;
-      body.appendChild(d);
-    }
-
-    const meta = document.createElement('div');
-    meta.className = 'card__meta';
-    if (it.found_location) {
-      const loc = document.createElement('span');
-      loc.textContent = `📍 ${it.found_location}`;
-      meta.appendChild(loc);
-    }
-    if (it.found_date) {
-      const dt = document.createElement('span');
-      dt.textContent = `🗓 Encontrado a ${fmtDate(it.found_date)}`;
-      meta.appendChild(dt);
-    }
-    const ref = document.createElement('span');
-    ref.className = 'card__ref';
-    ref.textContent = `Ref. #${it.id}`;
-    meta.appendChild(ref);
-    body.appendChild(meta);
-
-    card.appendChild(body);
-    frag.appendChild(card);
-  }
+  list.forEach((it, i) => frag.appendChild(tile(it, i)));
   el.grid.appendChild(frag);
 }
 
-function applyFilters() {
-  const q = el.search.value.trim().toLowerCase();
-  const cat = el.category.value;
-  const list = ITEMS.filter((it) => {
-    if (cat && it.category !== cat) return false;
-    if (!q) return true;
-    const hay = [it.title, it.description, it.found_location, it.category, catPT(it.category), '#' + it.id]
-      .join(' ').toLowerCase();
-    return hay.includes(q);
-  });
-  render(list);
+function updateCounts() {
+  const all = ITEMS.length;
+  const found = ITEMS.filter((i) => i.status === 'found').length;
+  const stored = ITEMS.filter((i) => i.status === 'stored').length;
+  const set = { all, found, stored };
+  el.pills.querySelectorAll('.fpill__n').forEach((n) => { n.textContent = set[n.dataset.count]; });
 }
 
 /* ---------- Lightbox ---------- */
@@ -155,15 +135,14 @@ function openLightbox(item) {
 }
 function showLb() {
   el.lbImg.src = lbSet[lbIdx];
-  el.lb.querySelector('.lightbox__prev').style.visibility = lbSet.length > 1 ? 'visible' : 'hidden';
-  el.lb.querySelector('.lightbox__next').style.visibility = lbSet.length > 1 ? 'visible' : 'hidden';
+  el.lb.querySelector('.lb__prev').style.visibility = lbSet.length > 1 ? 'visible' : 'hidden';
+  el.lb.querySelector('.lb__next').style.visibility = lbSet.length > 1 ? 'visible' : 'hidden';
 }
 function closeLb() { el.lb.hidden = true; el.lbImg.src = ''; document.body.style.overflow = ''; }
 function stepLb(d) { lbIdx = (lbIdx + d + lbSet.length) % lbSet.length; showLb(); }
-
-el.lb.querySelector('.lightbox__close').addEventListener('click', closeLb);
-el.lb.querySelector('.lightbox__prev').addEventListener('click', () => stepLb(-1));
-el.lb.querySelector('.lightbox__next').addEventListener('click', () => stepLb(1));
+el.lb.querySelector('.lb__close').addEventListener('click', closeLb);
+el.lb.querySelector('.lb__prev').addEventListener('click', () => stepLb(-1));
+el.lb.querySelector('.lb__next').addEventListener('click', () => stepLb(1));
 el.lb.addEventListener('click', (e) => { if (e.target === el.lb) closeLb(); });
 document.addEventListener('keydown', (e) => {
   if (el.lb.hidden) return;
@@ -172,35 +151,38 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') stepLb(1);
 });
 
+/* ---------- Events ---------- */
+el.pills.addEventListener('click', (e) => {
+  const pill = e.target.closest('.fpill');
+  if (!pill) return;
+  e.preventDefault();
+  status = pill.dataset.status;
+  el.pills.querySelectorAll('.fpill').forEach((p) => p.classList.toggle('fpill--active', p === pill));
+  render();
+});
+el.search.addEventListener('input', render);
+el.category.addEventListener('change', render);
+
 /* ---------- Boot ---------- */
-el.search.addEventListener('input', applyFilters);
-el.category.addEventListener('change', applyFilters);
-
-if (CONTACT.note) el.footClaim.textContent = CONTACT.note;
-const extra = [CONTACT.phone && `☎ ${CONTACT.phone}`, CONTACT.email && `✉ ${CONTACT.email}`].filter(Boolean).join('   ·   ');
-if (extra) { const p = document.createElement('p'); p.textContent = extra; el.footClaim.after(p); }
-
 fetch('./data.json?v=' + Date.now(), { cache: 'no-store' })
   .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then((data) => {
     ITEMS = Array.isArray(data.items) ? data.items : [];
-    // category dropdown from data present
-    const cats = [...new Set(ITEMS.map((i) => i.category).filter(Boolean))]
-      .sort((a, b) => catPT(a).localeCompare(catPT(b), 'pt'));
+    const cats = [...new Set(ITEMS.map((i) => i.category).filter(Boolean))].sort((a, b) => clabel(a).localeCompare(clabel(b), 'pt'));
     for (const c of cats) {
       const o = document.createElement('option');
-      o.value = c; o.textContent = `${catIcon(c)} ${catPT(c)}`;
+      o.value = c; o.textContent = clabel(c);
       el.category.appendChild(o);
     }
     if (data.updated) {
       const d = new Date(data.updated);
-      el.updated.textContent = 'Atualizado a ' + d.toLocaleString('pt-PT', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-      });
+      el.updated.textContent = 'Atualizado a ' + d.toLocaleString('pt-PT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
     }
-    applyFilters();
+    updateCounts();
+    render();
   })
   .catch((err) => {
-    el.status.textContent = 'Não foi possível carregar a lista neste momento.';
+    el.empty.hidden = false;
+    el.empty.querySelector('.empty-state__title').textContent = 'Não foi possível carregar a lista';
     console.error('data.json load failed:', err);
   });
