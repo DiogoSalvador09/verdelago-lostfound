@@ -13,6 +13,31 @@ $summary = & node (Join-Path $SITE 'export.js')
 if ($LASTEXITCODE -ne 0) { Log "EXPORT ERROR (exit $LASTEXITCODE): $summary"; exit 1 }
 Log "export: $summary"
 
+# link.json — the live public address of the app, so the STABLE GitHub links
+# (entrar.html / hk.html) can forward to it. The free Cloudflare quick tunnel
+# gets a new hostname on every restart; this is what keeps the bookmark working.
+$tunFile = 'C:\Users\verdelagoresort\.local\bin\lost-and-found\current_url.txt'
+if (Test-Path $tunFile) {
+  $tun = (Get-Content -LiteralPath $tunFile -Raw).Trim().TrimEnd('/')
+  if ($tun -match '^https://') {
+    $link = [ordered]@{
+      app     = $tun
+      hk      = "$tun/hk/new"
+      painel  = "$tun/dashboard"
+      lan     = 'http://172.27.90.228:3500'
+      updated = (Get-Date).ToString('s')
+    }
+    $json = $link | ConvertTo-Json
+    $linkPath = Join-Path $SITE 'link.json'
+    $old = if (Test-Path $linkPath) { (Get-Content -LiteralPath $linkPath -Raw) } else { '' }
+    # compare ignoring the timestamp so an unchanged tunnel doesn't force a commit
+    if (($old -replace '"updated".*','') -ne ($json -replace '"updated".*','')) {
+      [IO.File]::WriteAllText($linkPath, $json, (New-Object Text.UTF8Encoding($false)))
+      Log "link.json updated -> $tun"
+    }
+  }
+}
+
 # 2) stage / commit only if something changed
 Set-Location -LiteralPath $SITE
 & $GIT add -A | Out-Null

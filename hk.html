@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <base href="/verdelago-lostfound/">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#2E5E4E">
+  <title>Registar artigo — Verdelago</title>
+  <link rel="icon" type="image/svg+xml" href="./icon-green.svg">
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:#2E5E4E;color:#fff;display:flex;align-items:center;justify-content:center;
+      font-family:-apple-system,'Segoe UI',Roboto,sans-serif;padding:28px;text-align:center}
+    .box{max-width:420px;width:100%}
+    .logo{width:66px;height:auto;margin-bottom:18px;opacity:.95}
+    h1{font-size:1.45rem;margin:0 0 8px;font-weight:800}
+    p{margin:0 0 22px;opacity:.85;font-size:1rem;line-height:1.5}
+    .spin{width:44px;height:44px;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;
+      animation:s .8s linear infinite;margin:0 auto 22px}
+    @keyframes s{to{transform:rotate(360deg)}}
+    a.btn{display:block;background:#fff;color:#2E5E4E;text-decoration:none;padding:17px 28px;border-radius:15px;
+      font-weight:800;font-size:1.08rem;margin-top:10px}
+    .err{background:rgba(0,0,0,.22);border-radius:14px;padding:16px;font-size:.92rem;line-height:1.5;text-align:left}
+    .muted{opacity:.6;font-size:.8rem;margin-top:20px}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <svg class="logo" viewBox="0 0 124 103" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M56.909 74.692l-.764-4.157 1.986 6.351zm66.382-35.553l-1.164-1.507L68.91 78.744l45.214-51.79-1.435-1.253-45.652 52.294 34.357-61.707-1.663-.926-34.256 61.524L87.627 6.047 85.81 5.48 63.647 76.348 71.094.185 69.199 0l-7.397 75.654L54.406 0l-1.895.185 7.446 76.163-6.66-21.298-5.185-28.19-1.872.345 2.357 12.817L37.794 5.479l-1.817.568 15.468 49.46L54.018 69.5l-.283-.509L37.748 28.6l-1.77.701 10.675 26.972-22.778-40.91-1.663.926 29.799 53.52.559 1.413-25.39-38.214-1.586 1.053 23.508 35.381-38.186-43.74-1.434 1.252L36.568 57.98 16.534 38.192l-1.338 1.354 34.372 33.95-10.127-6.536L1.477 37.632.314 39.139l20.204 15.608-12.83-8.28-1.033 1.6 31.687 20.449 6.467 4.996L2.264 56.636l-.702 1.77L47.89 76.782.324 68.554 0 70.43l47.532 8.222-45.605 1.566.065 1.902L47.8 80.548l-43.688 10.9.46 1.847 43.032-10.736-39.218 18.468.811 1.723 45.64-21.492 6.966 5.403z"/></svg>
+    <div id="loading">
+      <div class="spin"></div>
+      <h1>A abrir…</h1>
+      <p>Registar artigo encontrado</p>
+    </div>
+    <div id="manual" style="display:none">
+      <h1>Perdidos &amp; Achados</h1>
+      <p>Toque para abrir o formulário de registo.</p>
+      <a class="btn" id="go" href="#">Abrir</a>
+    </div>
+    <div id="fail" style="display:none">
+      <h1>Indisponível</h1>
+      <div class="err">
+        Não foi possível obter o endereço da aplicação. Isto costuma resolver-se sozinho em poucos minutos.
+        <br><br>Se continuar, use a aplicação na rede do resort:
+        <br><b>172.27.90.228:3500/hk/new</b>
+      </div>
+    </div>
+    <p class="muted">Verdelago Resort — Housekeeping</p>
+  </div>
+
+  <script>
+    // The resort PC publishes its current public address to link.json every few
+    // minutes (the free Cloudflare tunnel changes hostname whenever it restarts).
+    // This page always forwards to whatever is current, so the link you bookmark
+    // never goes stale.
+    var TARGET = 'hk';
+    fetch('./link.json?v=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) {
+        var url = d && d[TARGET];
+        if (!url) throw new Error('sem url');
+        document.getElementById('go').href = url;
+        // Some in-app browsers block an automatic redirect; show a button as well.
+        setTimeout(function () {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('manual').style.display = 'block';
+        }, 2500);
+        location.replace(url);
+      })
+      .catch(function () {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('fail').style.display = 'block';
+      });
+  </script>
+</body>
+</html>
