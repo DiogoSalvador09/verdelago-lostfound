@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/verdelago-lostfound/">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Painel - Verdelago Perdidos e Achados</title>
+  <link rel="icon" type="image/svg+xml" href="./icon-green.svg">
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    .navbar__readonly{ font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+      color:#2E5E4E; background:rgba(46,94,78,.10); padding:6px 12px; border-radius:20px; white-space:nowrap; }
+    .an-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:16px; }
+    .an-pills { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:28px; }
+    .an-2col { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+    .an-pill { background:#fff;border-radius:14px;padding:16px 18px;border:1px solid #E8EFE9; }
+    .an-kpi__n { font-size:2.1rem;font-weight:800;color:#111;line-height:1; }
+    .an-kpi__lbl { font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#888;margin-bottom:10px; }
+    .an-kpi__sub { font-size:0.74rem;color:#999;margin-top:6px; }
+    .an-sec-title { font-size:1.0rem;font-weight:700;color:#111;margin:0 0 16px; }
+    .an-card { background:#fff;border-radius:16px;padding:22px;box-shadow:0 1px 3px rgba(0,0,0,0.04);border:1px solid #E8EFE9; }
+    @media (max-width:880px){
+      .an-kpis{grid-template-columns:repeat(2,1fr);} .an-pills{grid-template-columns:repeat(2,1fr);} .an-2col{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+  <nav class="navbar" style="position:fixed;">
+    <div class="navbar__inner">
+      <a href="./" class="navbar__brand">
+        <img src="./logo.svg" alt="Verdelago" style="height:28px;width:auto;">
+        <span class="navbar__divider"></span>
+        <span class="navbar__app-name">Perdidos e Achados</span>
+      </a>
+      <div class="navbar__nav">
+        <a href="./" class="navbar__link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Artigos
+        </a>
+        <a href="./painel.html" class="navbar__link navbar__link--active">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Painel
+        </a>
+      </div>
+      <div class="navbar__user">
+        <span class="navbar__readonly">Consulta pública</span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="page-content">
+    <div class="container" id="painel">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:26px;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h1 id="saudacao" style="font-size:1.9rem;font-weight:800;color:#111;margin:0;letter-spacing:-0.02em;">Painel</h1>
+          <p style="color:#666;font-size:0.92rem;margin:4px 0 0;">Painel de análise — Perdidos e Achados</p>
+        </div>
+        <span id="updated" style="font-size:0.78rem;color:#8A948C;"></span>
+      </div>
+      <div id="body"></div>
+    </div>
+  </main>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p class="footer__text">Verdelago Resort &mdash; Perdidos e Achados</p>
+  </div>
+</footer>
+
+<script src="./painel.js" defer></script>
+</body>
+</html>
