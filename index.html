@@ -47,15 +47,86 @@
     #up .overlay[hidden]{ display:none; } .spin{ width:48px;height:48px;border:5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite; } @keyframes sp{ to{ transform:rotate(360deg); } }
     /* housekeeping upload-only app */
     #hk[hidden]{ display:none; }
-    #hk-onboard{ position:fixed;inset:0;background:#2E5E4E;color:#fff;display:flex;align-items:center;justify-content:center;padding:26px;z-index:130;text-align:center; }
-    #hk-onboard[hidden]{ display:none; }
-    #hk-onboard .ob{ max-width:380px;width:100%; } #hk-onboard img{ height:40px;margin-bottom:14px; }
-    #hk-onboard h1{ font-size:1.6rem;margin:0 0 6px; } #hk-onboard p{ opacity:.85;margin:0 0 22px; }
-    .hk-chips{ display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px; }
-    .hk-chips button{ background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:22px;padding:11px 18px;font-size:1rem;font-weight:600;cursor:pointer;font-family:inherit; }
-    .hk-chips button.sel{ background:#fff;color:#2E5E4E; }
-    #hk-onboard input{ width:100%;box-sizing:border-box;border:none;border-radius:13px;padding:15px 16px;font-size:1.05rem;margin-bottom:14px;font-family:inherit; }
-    #hk-onboard .go{ width:100%;background:#fff;color:#2E5E4E;border:none;border-radius:13px;padding:16px;font-size:1.08rem;font-weight:800;cursor:pointer;font-family:inherit; }
+    /* ── Onboarding: premium minimalist ─────────────────────────────────────
+       Deep atmospheric ground, a slow gold aurora, hairline rules and a serif
+       headline. No boxes — the input is a single lit underline.            */
+    #hk-onboard{
+      position:fixed; inset:0; z-index:130; padding:32px;
+      display:flex; align-items:center; justify-content:center; text-align:center;
+      color:#F4EFE6; overflow:hidden;
+      background:
+        radial-gradient(120% 80% at 50% -10%, #1C3D31 0%, transparent 60%),
+        radial-gradient(90% 60% at 50% 110%, #16352B 0%, transparent 65%),
+        linear-gradient(180deg, #0A1A14 0%, #07120E 100%);
+    }
+    #hk-onboard[hidden]{ display:none !important; }
+    /* slow-drifting gold aurora */
+    #hk-onboard::before{
+      content:''; position:absolute; left:50%; top:38%; width:150vmax; height:150vmax;
+      transform:translate(-50%,-50%); pointer-events:none;
+      background:radial-gradient(circle, rgba(184,148,62,.16) 0%, rgba(184,148,62,.05) 32%, transparent 62%);
+      animation:auroraDrift 16s ease-in-out infinite alternate;
+    }
+    @keyframes auroraDrift{ from{ transform:translate(-50%,-50%) scale(1); opacity:.85; } to{ transform:translate(-50%,-54%) scale(1.14); opacity:1; } }
+    /* fine grain for a printed, tactile feel */
+    #hk-onboard::after{
+      content:''; position:absolute; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    #hk-onboard .ob{ position:relative; z-index:1; max-width:400px; width:100%; }
+    #hk-onboard .ob > *{ opacity:0; animation:obRise .9s cubic-bezier(.22,.61,.36,1) forwards; }
+    #hk-onboard .ob > *:nth-child(1){ animation-delay:.05s } #hk-onboard .ob > *:nth-child(2){ animation-delay:.16s }
+    #hk-onboard .ob > *:nth-child(3){ animation-delay:.27s } #hk-onboard .ob > *:nth-child(4){ animation-delay:.38s }
+    #hk-onboard .ob > *:nth-child(5){ animation-delay:.49s } #hk-onboard .ob > *:nth-child(6){ animation-delay:.60s }
+    #hk-onboard .ob > *:nth-child(7){ animation-delay:.70s }
+    @keyframes obRise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+    #hk-onboard .mark{ height:52px; width:auto; margin:0 auto 26px; display:block; filter:drop-shadow(0 0 22px rgba(184,148,62,.4)); }
+    #hk-onboard .eyebrow{
+      font-size:.62rem; letter-spacing:.42em; text-transform:uppercase; font-weight:500;
+      color:#B8943E; margin:0 0 20px; padding-left:.42em;
+    }
+    #hk-onboard .rule{ width:34px; height:1px; margin:0 auto 24px; background:linear-gradient(90deg,transparent,rgba(184,148,62,.85),transparent); }
+    #hk-onboard h1{
+      font-family:'DM Serif Display',Georgia,serif; font-weight:400; font-size:2.45rem; line-height:1.1;
+      margin:0 0 10px; color:#F4EFE6; letter-spacing:-.01em;
+    }
+    #hk-onboard .sub{ font-size:.95rem; font-weight:300; color:rgba(244,239,230,.55); margin:0 0 40px; letter-spacing:.01em; }
+    /* name chips — hairline, not filled */
+    .hk-chips{ display:flex; flex-wrap:wrap; gap:9px; justify-content:center; margin:0 0 26px; }
+    .hk-chips:empty{ display:none; }
+    .hk-chips button{
+      background:transparent; color:rgba(244,239,230,.8); border:1px solid rgba(244,239,230,.2);
+      border-radius:100px; padding:10px 20px; font-size:.9rem; font-weight:400; cursor:pointer;
+      font-family:inherit; letter-spacing:.02em; transition:all .35s cubic-bezier(.22,.61,.36,1);
+    }
+    .hk-chips button:hover{ border-color:rgba(184,148,62,.6); color:#F4EFE6; }
+    .hk-chips button.sel{ background:rgba(184,148,62,.14); border-color:#B8943E; color:#F4EFE6; }
+    /* underline input, no box */
+    .field{ position:relative; margin:0 0 38px; }
+    #hk-onboard input{
+      width:100%; box-sizing:border-box; background:transparent; border:none;
+      border-bottom:1px solid rgba(244,239,230,.22); border-radius:0;
+      padding:14px 4px; font-size:1.15rem; font-family:inherit; font-weight:300;
+      color:#F4EFE6; text-align:center; letter-spacing:.02em; outline:none;
+      transition:border-color .4s ease;
+    }
+    #hk-onboard input::placeholder{ color:rgba(244,239,230,.3); font-weight:300; }
+    #hk-onboard input:focus{ border-bottom-color:rgba(184,148,62,.5); }
+    /* the lit underline that grows from the centre on focus */
+    .field::after{
+      content:''; position:absolute; left:50%; bottom:0; width:0; height:1px;
+      background:linear-gradient(90deg,transparent,#B8943E,transparent);
+      transform:translateX(-50%); transition:width .5s cubic-bezier(.22,.61,.36,1);
+    }
+    .field:focus-within::after{ width:100%; }
+    #hk-onboard .go{
+      width:100%; background:transparent; color:#F4EFE6; border:1px solid rgba(184,148,62,.55);
+      border-radius:100px; padding:17px; font-size:.78rem; font-weight:600; cursor:pointer;
+      font-family:inherit; letter-spacing:.28em; text-transform:uppercase; padding-left:calc(.28em + 17px);
+      transition:all .45s cubic-bezier(.22,.61,.36,1);
+    }
+    #hk-onboard .go:hover{ background:rgba(184,148,62,.12); border-color:#B8943E; }
+    #hk-onboard .go:active{ transform:scale(.985); }
     #hk-main{ background:#F4F7F4;min-height:100vh; } #hk-main[hidden]{ display:none; }
     .hk-top{ background:#2E5E4E;color:#fff;padding:calc(14px + env(safe-area-inset-top,0)) 18px 14px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:2; }
     .hk-top img{ height:30px; } .hk-hi{ font-weight:800;font-size:1.05rem; } .hk-sub{ font-size:.75rem;opacity:.8; }
@@ -165,11 +236,15 @@
     <!-- first-run: ask name -->
     <div id="hk-onboard" hidden>
       <div class="ob">
-        <img src="./logo-cream.svg" alt="Verdelago" onerror="this.style.display='none'">
-        <h1>Bem-vinda! 👋</h1>
-        <p>Como te chamas?</p>
+        <img class="mark" src="./logo-cream.svg" alt="Verdelago" onerror="this.style.display='none'">
+        <div class="eyebrow">Verdelago Resort</div>
+        <div class="rule"></div>
+        <h1>Bem-vinda</h1>
+        <p class="sub">Antes de começar, como te chamas?</p>
         <div class="hk-chips" id="hk-chips"></div>
-        <input id="hk-name-input" type="text" placeholder="O teu nome" autocapitalize="words" autocomplete="off">
+        <div class="field">
+          <input id="hk-name-input" type="text" placeholder="O teu nome" autocapitalize="words" autocomplete="off">
+        </div>
         <button class="go" id="hk-ob-go">Continuar</button>
       </div>
     </div>
