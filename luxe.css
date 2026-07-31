@@ -139,8 +139,15 @@ html, body{
     radial-gradient(120% 80% at 50% -10%, #1C3D31 0%, transparent 60%),
     linear-gradient(180deg, var(--ink-2) 0%, var(--ink) 100%) !important;
 }
+/* style.css paints .card as a white panel — strip it back to bare centred content */
+#login .card{
+  background: transparent !important; background-color: transparent !important;
+  border: none !important; box-shadow: none !important; border-radius: 0 !important; padding: 0 !important;
+}
+#login img{ filter: drop-shadow(0 0 20px rgba(184,148,62,.35)); }
 #login h1{ font-family: var(--serif) !important; font-size: 1.9rem !important; letter-spacing:0 !important;
-  text-transform:none !important; font-weight:400 !important; opacity:1 !important; margin-bottom:34px !important; }
+  text-transform:none !important; font-weight:400 !important; opacity:1 !important; margin-bottom:34px !important;
+  color: var(--cream) !important; }
 #login input{
   background: transparent !important; background-color: transparent !important;
   border: none !important; border-bottom: 1px solid var(--hair) !important; border-radius: 0 !important;
