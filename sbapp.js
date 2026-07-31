@@ -1,0 +1,205 @@
+/* Verdelago · Perdidos e Achados — Supabase-backed app on GitHub Pages.
+   Everything is behind a shared login (RLS: only authenticated can read/write),
+   so guest data is never public. Photos live in a private bucket, shown via
+   short-lived signed URLs. */
+
+const sb = supabase.createClient(CONFIG.url, CONFIG.anon);
+
+const SL = { found:'Encontrado', stored:'Armazenado', returned:'Devolvido', disposed:'Descartado' };
+const CL = { Clothing:'Roupa', Electronics:'Eletrónica', Documents:'Documentos', Keys:'Chaves',
+  'Bags & Luggage':'Malas e Bagagem', 'Jewelry & Watches':'Joias e Relógios', Toiletries:'Artigos de Higiene',
+  'Books & Media':'Livros e Média', 'Sports Equipment':'Equip. Desportivo', 'Children Items':'Artigos de Criança', Other:'Outros' };
+const CATS = Object.keys(CL);
+const STORES = ['', 'Back Office - Caixa de L&F', 'Back Office - Cofres', 'Housekeeping Storage', 'Sala de Bagagens 1 (Trancada)', 'Sala de Bagagens 2 (Aberta)'];
+const clabel = (c) => CL[c] || c || 'Outros';
+const esc = (s) => String(s == null ? '' : s);
+const $ = (id) => document.getElementById(id);
+
+function guessCat(t) {
+  t = (t || '').toLowerCase();
+  const m = [
+    [/óculos|oculos|sunglass|glasses/, 'Jewelry & Watches'], [/relógio|relogio|watch|pulseira|colar|anel|brinco|joia/, 'Jewelry & Watches'],
+    [/carreg|charger|telem|phone|iphone|fones|headphone|auscult|cabo|power ?bank|portátil|laptop|tablet|camera|câmara/, 'Electronics'],
+    [/passaporte|cartão|cartao|bilhete|documento|carta|id\b/, 'Documents'], [/chave|key/, 'Keys'],
+    [/mala|mochila|saco|bolsa|carteira|bag|luggage/, 'Bags & Luggage'],
+    [/toalha|roupa|casaco|camisa|t-?shirt|calç|chapéu|chapeu|boné|bone|fato|biquini|bikini|sapato|ténis|tenis|meia/, 'Clothing'],
+    [/bola|raquete|óculos de nata|touca|barbatana|prancha|bike|bicicleta/, 'Sports Equipment'],
+    [/livro|revista|book|carreg|kobo|kindle/, 'Books & Media'],
+    [/creme|escova|pasta|higiene|shampoo|perfume/, 'Toiletries'], [/criança|crianca|bebé|bebe|brinquedo|fralda|chupeta/, 'Children Items'],
+  ];
+  for (const [re, c] of m) if (re.test(t)) return c;
+  return 'Other';
+}
+
+let ITEMS = [], status = '', signedCache = {};
+
+/* ---------------- Auth ---------------- */
+async function showApp() {
+  $('login').style.display = 'none';
+  $('appwrap').hidden = false;
+  await loadItems();
+}
+function showLogin(msg) {
+  $('appwrap').hidden = true;
+  $('login').style.display = 'flex';
+  if (msg) { const e = $('login-err'); e.textContent = msg; e.style.display = 'block'; }
+}
+async function doLogin() {
+  const u = $('u').value.trim(), p = $('p').value;
+  if (!u || !p) return;
+  const email = u.includes('@') ? u : u + '@verdelago.pt';
+  $('login-btn').disabled = true; $('login-btn').textContent = 'A entrar…';
+  const { error } = await sb.auth.signInWithPassword({ email, password: p });
+  $('login-btn').disabled = false; $('login-btn').textContent = 'Entrar';
+  if (error) { const e = $('login-err'); e.textContent = 'Utilizador ou palavra-passe inválidos.'; e.style.display = 'block'; return; }
+  await showApp();
+}
+$('login-btn').addEventListener('click', doLogin);
+$('p').addEventListener('keyup', (e) => { if (e.key === 'Enter') doLogin(); });
+$('logout').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+/* ---------------- Data ---------------- */
+async function loadItems() {
+  const { data, error } = await sb.from('items').select('*').order('found_date', { ascending: false }).order('id', { ascending: false });
+  if (error) { $('empty').hidden = false; $('empty').querySelector('.empty-state__title').textContent = 'Erro ao carregar'; return; }
+  ITEMS = data || [];
+  // pre-sign the first photo of every item in one call
+  const firsts = ITEMS.filter(i => i.photos && i.photos.length).map(i => i.photos[0]);
+  if (firsts.length) {
+    const { data: signed } = await sb.storage.from('items').createSignedUrls(firsts, 3600);
+    (signed || []).forEach(s => { if (s.signedUrl) signedCache[s.path] = s.signedUrl; });
+  }
+  buildCats(); updateCounts(); render();
+}
+function buildCats() {
+  const sel = $('catf'); sel.length = 1;
+  [...new Set(ITEMS.map(i => i.category).filter(Boolean))].sort((a, b) => clabel(a).localeCompare(clabel(b), 'pt'))
+    .forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = clabel(c); sel.appendChild(o); });
+}
+function updateCounts() {
+  const s = { all: ITEMS.length, found: ITEMS.filter(i => i.status === 'found').length, stored: ITEMS.filter(i => i.status === 'stored').length };
+  document.querySelectorAll('#pills .fpill__n').forEach(n => n.textContent = s[n.dataset.c]);
+}
+function currentList() {
+  const q = $('q').value.trim().toLowerCase(), cat = $('catf').value;
+  return ITEMS.filter(it => {
+    if (status && it.status !== status) return false;
+    if (cat && it.category !== cat) return false;
+    if (!q) return true;
+    return [it.title, it.description, it.found_location, clabel(it.category)].join(' ').toLowerCase().includes(q);
+  });
+}
+function tile(it, idx) {
+  const days = it.found_date ? Math.floor((Date.now() - new Date(it.found_date).getTime()) / 864e5) : -1;
+  const left = 90 - days, tc = left <= 7 ? 'tchip--urgent' : (left <= 30 ? 'tchip--warn' : 'tchip--ok');
+  const a = document.createElement('div');
+  a.className = 'item-tile'; a.style.animationDelay = Math.min(idx * 32, 400) + 'ms'; a.tabIndex = 0;
+  const url = it.photos && it.photos.length ? signedCache[it.photos[0]] : null;
+  if (url) a.innerHTML = `<img class="item-tile__img" loading="lazy" src="${url}" alt=""><div class="item-tile__overlay"></div>`;
+  else a.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+  const top = document.createElement('div'); top.className = 'item-tile__top';
+  top.innerHTML = `<span class="gbadge gbadge--${esc(it.status)}"><span class="gbadge__dot"></span>${SL[it.status] || esc(it.status)}</span>` + (days >= 0 ? `<span class="tchip ${tc}">${left <= 0 ? 'Expirado!' : left + 'd'}</span>` : '');
+  const bot = document.createElement('div'); bot.className = 'item-tile__bottom';
+  const meta = it.found_location || clabel(it.category);
+  bot.innerHTML = `<div class="item-tile__title"></div><div class="item-tile__meta"></div>`;
+  bot.querySelector('.item-tile__title').textContent = it.title || 'Artigo';
+  bot.querySelector('.item-tile__meta').textContent = meta;
+  a.appendChild(top); a.appendChild(bot);
+  if (it.photos && it.photos.length) a.addEventListener('click', () => openLb(it));
+  return a;
+}
+function render() {
+  const list = currentList(), g = $('grid');
+  g.textContent = ''; $('empty').hidden = list.length > 0; g.style.display = list.length ? 'grid' : 'none';
+  const f = document.createDocumentFragment();
+  list.forEach((it, i) => f.appendChild(tile(it, i)));
+  g.appendChild(f);
+  $('count').textContent = `${list.length} ${list.length === 1 ? 'artigo' : 'artigos'}`;
+}
+$('pills').addEventListener('click', (e) => { const p = e.target.closest('.fpill'); if (!p) return; e.preventDefault(); status = p.dataset.status; document.querySelectorAll('#pills .fpill').forEach(x => x.classList.toggle('fpill--active', x === p)); render(); });
+$('q').addEventListener('input', render);
+$('catf').addEventListener('change', render);
+
+/* ---------------- Lightbox ---------------- */
+let lbSet = [], lbIdx = 0;
+async function openLb(it) {
+  const { data } = await sb.storage.from('items').createSignedUrls(it.photos, 3600);
+  lbSet = (data || []).map(d => d.signedUrl).filter(Boolean); lbIdx = 0;
+  if (!lbSet.length) return;
+  $('lb-img').src = lbSet[0]; $('lb').hidden = false; document.body.style.overflow = 'hidden';
+}
+function lbStep(d) { lbIdx = (lbIdx + d + lbSet.length) % lbSet.length; $('lb-img').src = lbSet[lbIdx]; }
+$('lb').querySelector('.cl').addEventListener('click', () => { $('lb').hidden = true; document.body.style.overflow = ''; });
+$('lb').querySelector('.pv').addEventListener('click', () => lbStep(-1));
+$('lb').querySelector('.nx').addEventListener('click', () => lbStep(1));
+
+/* ---------------- Upload ---------------- */
+let selected = [];
+CATS.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = clabel(c); $('up-cat').appendChild(o); });
+STORES.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s || '— não definido —'; $('up-store').appendChild(o); });
+$('new-btn').addEventListener('click', () => { $('up').hidden = false; try { $('up-by').value = localStorage.getItem('hk_name') || ''; } catch (e) {} });
+$('up-close').addEventListener('click', closeUp);
+function closeUp() { $('up').hidden = true; selected = []; $('up-prev').innerHTML = ''; $('up-form').reset(); $('up-sending').hidden = true; $('up-done').hidden = true; }
+$('up-title').addEventListener('input', () => { $('up-cat').value = guessCat($('up-title').value); });
+$('up-img').addEventListener('change', function () {
+  Array.prototype.forEach.call(this.files, f => { if (selected.length < 5) selected.push(f); });
+  renderPrev();
+});
+function renderPrev() {
+  const p = $('up-prev'); p.innerHTML = '';
+  selected.forEach((file, i) => {
+    const w = document.createElement('div'); w.className = 'pwrap';
+    const im = document.createElement('img'); const r = new FileReader(); r.onload = e => im.src = e.target.result; r.readAsDataURL(file); w.appendChild(im);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'rm'; b.innerHTML = '&times;'; b.onclick = () => { selected.splice(i, 1); renderPrev(); }; w.appendChild(b);
+    p.appendChild(w);
+  });
+}
+function compress(file) {
+  return new Promise(res => {
+    if (!/^image\//.test(file.type)) return res(file);
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      URL.revokeObjectURL(url); let { width: w, height: h } = im; const max = 1600;
+      if (Math.max(w, h) > max) { const s = max / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+      const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(im, 0, 0, w, h);
+      c.toBlob(b => res(b || file), 'image/jpeg', 0.7);
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); res(file); };
+    im.src = url;
+  });
+}
+$('up-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = $('up-title').value.trim();
+  if (!title) return;
+  try { localStorage.setItem('hk_name', $('up-by').value.trim()); } catch (e2) {}
+  $('up-sending').hidden = false;
+  try {
+    const { data: row, error } = await sb.from('items').insert({
+      title, category: $('up-cat').value || guessCat(title), status: 'found', source: 'app',
+      found_location: $('up-loc').value.trim(), storage_location: $('up-store').value, found_by: $('up-by').value.trim(),
+    }).select().single();
+    if (error) throw error;
+    const paths = [];
+    for (let i = 0; i < selected.length; i++) {
+      const blob = await compress(selected[i]);
+      const name = `${Date.now()}-${i}.jpg`;
+      const p = `${row.id}/${name}`;
+      const { error: ue } = await sb.storage.from('items').upload(p, blob, { contentType: 'image/jpeg', upsert: true });
+      if (!ue) paths.push(p);
+    }
+    if (paths.length) await sb.from('items').update({ photos: paths }).eq('id', row.id);
+    $('up-sending').hidden = true; $('up-done').hidden = false;
+    await loadItems();
+  } catch (err) {
+    $('up-sending').hidden = true;
+    alert('Não foi possível registar: ' + (err.message || err));
+  }
+});
+$('up-again').addEventListener('click', () => { closeUp(); $('up').hidden = false; });
+
+/* ---------------- Boot ---------------- */
+(async () => {
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) showApp(); else showLogin();
+})();
