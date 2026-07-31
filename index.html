@@ -8,6 +8,11 @@
   <meta name="theme-color" content="#2E5E4E">
   <title>Perdidos e Achados — Verdelago</title>
   <link rel="icon" type="image/svg+xml" href="./icon-green.svg">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Perdidos">
   <link rel="stylesheet" href="./style.css">
   <!-- dark-luxe theme; must load AFTER style.css to override the light defaults -->
   <link rel="stylesheet" href="./luxe.css">
@@ -55,24 +60,24 @@
     #hk-onboard{
       position:fixed; inset:0; z-index:130; padding:32px;
       display:flex; align-items:center; justify-content:center; text-align:center;
-      color:#F4EFE6; overflow:hidden;
+      color:#1E3F34; overflow:hidden;
       background:
-        radial-gradient(120% 80% at 50% -10%, #1C3D31 0%, transparent 60%),
-        radial-gradient(90% 60% at 50% 110%, #16352B 0%, transparent 65%),
-        linear-gradient(180deg, #0A1A14 0%, #07120E 100%);
+        radial-gradient(120% 80% at 50% -10%, #FFFFFF 0%, transparent 58%),
+        radial-gradient(90% 60% at 50% 110%, #F6F4EF 0%, transparent 65%),
+        linear-gradient(180deg, #F6F4EF 0%, #EDEAE3 100%);
     }
     #hk-onboard[hidden]{ display:none !important; }
-    /* slow-drifting gold aurora */
+    /* slow-drifting warm light */
     #hk-onboard::before{
       content:''; position:absolute; left:50%; top:38%; width:150vmax; height:150vmax;
       transform:translate(-50%,-50%); pointer-events:none;
-      background:radial-gradient(circle, rgba(184,148,62,.16) 0%, rgba(184,148,62,.05) 32%, transparent 62%);
+      background:radial-gradient(circle, rgba(184,148,62,.10) 0%, rgba(184,148,62,.03) 32%, transparent 62%);
       animation:auroraDrift 16s ease-in-out infinite alternate;
     }
     @keyframes auroraDrift{ from{ transform:translate(-50%,-50%) scale(1); opacity:.85; } to{ transform:translate(-50%,-54%) scale(1.14); opacity:1; } }
     /* fine grain for a printed, tactile feel */
     #hk-onboard::after{
-      content:''; position:absolute; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+      content:''; position:absolute; inset:0; pointer-events:none; opacity:.035; mix-blend-mode:multiply;
       background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     #hk-onboard .ob{ position:relative; z-index:1; max-width:400px; width:100%; }
@@ -82,27 +87,27 @@
     #hk-onboard .ob > *:nth-child(5){ animation-delay:.49s } #hk-onboard .ob > *:nth-child(6){ animation-delay:.60s }
     #hk-onboard .ob > *:nth-child(7){ animation-delay:.70s }
     @keyframes obRise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
-    #hk-onboard .mark{ height:52px; width:auto; margin:0 auto 26px; display:block; filter:drop-shadow(0 0 22px rgba(184,148,62,.4)); }
+    #hk-onboard .mark{ height:52px; width:auto; margin:0 auto 26px; display:block; }
     #hk-onboard .eyebrow{
       font-size:.62rem; letter-spacing:.42em; text-transform:uppercase; font-weight:500;
       color:#B8943E; margin:0 0 20px; padding-left:.42em;
     }
-    #hk-onboard .rule{ width:34px; height:1px; margin:0 auto 24px; background:linear-gradient(90deg,transparent,rgba(184,148,62,.85),transparent); }
+    #hk-onboard .rule{ width:34px; height:1px; margin:0 auto 24px; background:linear-gradient(90deg,transparent,rgba(184,148,62,.9),transparent); }
     #hk-onboard h1{
       font-family:'DM Serif Display',Georgia,serif; font-weight:400; font-size:2.45rem; line-height:1.1;
-      margin:0 0 10px; color:#F4EFE6; letter-spacing:-.01em;
+      margin:0 0 10px; color:#1E3F34; letter-spacing:-.01em;
     }
-    #hk-onboard .sub{ font-size:.95rem; font-weight:300; color:rgba(244,239,230,.55); margin:0 0 40px; letter-spacing:.01em; }
+    #hk-onboard .sub{ font-size:.95rem; font-weight:300; color:#79837C; margin:0 0 40px; letter-spacing:.01em; }
     /* name chips — hairline, not filled */
     .hk-chips{ display:flex; flex-wrap:wrap; gap:9px; justify-content:center; margin:0 0 26px; }
     .hk-chips:empty{ display:none; }
     .hk-chips button{
-      background:transparent; color:rgba(244,239,230,.8); border:1px solid rgba(244,239,230,.2);
+      background:#FCFBF8; color:rgba(46,94,78,.8); border:1px solid rgba(46,94,78,.18);
       border-radius:100px; padding:10px 20px; font-size:.9rem; font-weight:400; cursor:pointer;
       font-family:inherit; letter-spacing:.02em; transition:all .35s cubic-bezier(.22,.61,.36,1);
     }
-    .hk-chips button:hover{ border-color:rgba(184,148,62,.6); color:#F4EFE6; }
-    .hk-chips button.sel{ background:rgba(184,148,62,.14); border-color:#B8943E; color:#F4EFE6; }
+    .hk-chips button:hover{ border-color:#B8943E; color:#1E3F34; }
+    .hk-chips button.sel{ background:rgba(184,148,62,.12); border-color:#B8943E; color:#1E3F34; }
     /* underline input, no box */
     .field{ position:relative; margin:0 0 38px; }
     /* !important throughout: the app's global stylesheet paints every input as a
@@ -110,18 +115,17 @@
     #hk-onboard input{
       width:100%; box-sizing:border-box;
       background:transparent !important; background-color:transparent !important;
-      border:none !important; border-bottom:1px solid rgba(244,239,230,.22) !important;
+      border:none !important; border-bottom:1px solid rgba(46,94,78,.22) !important;
       border-radius:0 !important; box-shadow:none !important;
       padding:14px 4px !important; font-size:1.15rem; font-family:inherit; font-weight:300;
-      color:#F4EFE6 !important; text-align:center; letter-spacing:.02em; outline:none;
+      color:#1E3F34 !important; text-align:center; letter-spacing:.02em; outline:none;
       transition:border-color .4s ease; -webkit-appearance:none; appearance:none;
     }
-    #hk-onboard input::placeholder{ color:rgba(244,239,230,.32) !important; font-weight:300; }
-    #hk-onboard input:focus{ border-bottom-color:rgba(184,148,62,.55) !important; }
-    /* stop the browser's autofill from repainting it white */
+    #hk-onboard input::placeholder{ color:#A3ABA5 !important; font-weight:300; }
+    #hk-onboard input:focus{ border-bottom-color:#B8943E !important; }
     #hk-onboard input:-webkit-autofill,
     #hk-onboard input:-webkit-autofill:focus{
-      -webkit-text-fill-color:#F4EFE6 !important;
+      -webkit-text-fill-color:#1E3F34 !important;
       -webkit-box-shadow:0 0 0 1000px transparent inset !important;
       transition:background-color 9999s ease-in-out 0s;
     }
@@ -133,14 +137,30 @@
     }
     .field:focus-within::after{ width:100%; }
     #hk-onboard .go{
-      width:100%; background:transparent; color:#F4EFE6; border:1px solid rgba(184,148,62,.55);
+      width:100%; background:transparent; color:#1E3F34; border:1px solid #2E5E4E;
       border-radius:100px; padding:17px; font-size:.78rem; font-weight:600; cursor:pointer;
       font-family:inherit; letter-spacing:.28em; text-transform:uppercase; padding-left:calc(.28em + 17px);
       transition:all .45s cubic-bezier(.22,.61,.36,1);
     }
-    #hk-onboard .go:hover{ background:rgba(184,148,62,.12); border-color:#B8943E; }
+    #hk-onboard .go:hover{ background:rgba(46,94,78,.08); border-color:#1E3F34; }
     #hk-onboard .go:active{ transform:scale(.985); }
-    #hk-main{ background:#F4F7F4;min-height:100vh; } #hk-main[hidden]{ display:none; }
+    /* install banner */
+    #install-bar{
+      position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom,0)); z-index:140;
+      background:#FCFBF8; border:1px solid rgba(46,94,78,.18); border-radius:16px;
+      box-shadow:0 8px 30px rgba(30,63,52,.14); padding:14px 16px;
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    }
+    #install-bar[hidden]{ display:none !important; }
+    .ib-txt{ flex:1; min-width:150px; font-size:.9rem; color:#1E3F34; font-weight:500; }
+    .ib-actions{ display:flex; gap:8px; margin-left:auto; }
+    .ib-later{ background:none; border:none; color:#79837C; font-size:.85rem; cursor:pointer; font-family:inherit; padding:9px 10px; }
+    .ib-go{
+      background:transparent; color:#1E3F34; border:1px solid #2E5E4E; border-radius:100px;
+      padding:9px 20px; font-size:.72rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+      cursor:pointer; font-family:inherit;
+    }
+    #hk-main{ min-height:100vh; } #hk-main[hidden]{ display:none; }
     .hk-top{ background:#2E5E4E;color:#fff;padding:calc(14px + env(safe-area-inset-top,0)) 18px 14px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:2; }
     .hk-top img{ height:30px; } .hk-hi{ font-weight:800;font-size:1.05rem; } .hk-sub{ font-size:.75rem;opacity:.8; }
     .hk-menu{ margin-left:auto;background:none;border:none;color:#fff;font-size:1.7rem;cursor:pointer;line-height:1; }
@@ -241,6 +261,15 @@
       <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
       <p style="font-size:1.3rem;font-weight:800;">Registado!</p>
       <button class="send" style="max-width:240px;background:#fff;color:#2E5E4E;" id="up-again">Adicionar outro</button>
+    </div>
+  </div>
+
+  <!-- Android install prompt (appears only when the browser offers it) -->
+  <div id="install-bar" hidden>
+    <div class="ib-txt">Instalar a aplicação no telemóvel</div>
+    <div class="ib-actions">
+      <button id="install-no" class="ib-later">Agora não</button>
+      <button id="install-go" class="ib-go">Instalar</button>
     </div>
   </div>
 

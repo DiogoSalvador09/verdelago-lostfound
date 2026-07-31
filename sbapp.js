@@ -238,8 +238,51 @@ $('hk-form').addEventListener('submit', async (e) => {
 });
 $('hk-again').addEventListener('click', () => { $('hk-done').hidden = true; });
 
+/* ================= Install prompt (Android) ================= */
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); deferredPrompt = e;
+  const bar = $('install-bar'); if (bar) bar.hidden = false;
+});
+window.addEventListener('appinstalled', () => { const b = $('install-bar'); if (b) b.hidden = true; deferredPrompt = null; });
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = $('install-go');
+  if (btn) btn.addEventListener('click', async () => {
+    if (!deferredPrompt) { $('install-bar').hidden = true; return; }
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null; $('install-bar').hidden = true;
+  });
+  const dismiss = $('install-no');
+  if (dismiss) dismiss.addEventListener('click', () => { $('install-bar').hidden = true; });
+});
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+}
+
 /* ================= Boot ================= */
+// A QR poster carries #k=<code>. The code maps to a login below, so the
+// housekeeping team never types (or even sees) a password: scan → signed in →
+// asked only for their name. The code is not the password; swapping it later
+// only means reprinting the poster.
+const QR_LOGINS = {
+  hk: { email: 'housekeeping@verdelago.pt', password: 'Housekeeping2026' },
+};
+async function tryQrLogin() {
+  const m = (location.hash || '').match(/[#&]k=([A-Za-z0-9_-]+)/);
+  if (!m) return null;
+  const creds = QR_LOGINS[m[1]];
+  // clear the hash immediately so the code isn't left sitting in the address bar
+  history.replaceState(null, '', location.pathname + location.search);
+  if (!creds) return null;
+  const { data, error } = await sb.auth.signInWithPassword({ email: creds.email, password: creds.password });
+  return (error || !data.session) ? null : data.session;
+}
+
 (async () => {
   const { data } = await sb.auth.getSession();
-  if (data && data.session) route(data.session); else showLogin();
+  if (data && data.session) { route(data.session); return; }
+  const qr = await tryQrLogin();
+  if (qr) { route(qr); return; }
+  showLogin();
 })();
