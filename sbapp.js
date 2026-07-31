@@ -123,7 +123,9 @@ function route(session) {
 async function doLogin() {
   const u = $('u').value.trim(), p = $('p').value;
   if (!u || !p) return;
-  const email = u.includes('@') ? u : u + '@verdelago.pt';
+  // lowercase on purpose: phone keyboards auto-capitalise the first letter, so
+  // "Verdelago" must reach the same account as "verdelago".
+  const email = (u.includes('@') ? u : u + '@verdelago.pt').toLowerCase();
   $('login-btn').disabled = true; $('login-btn').textContent = 'A entrar…';
   const { data, error } = await sb.auth.signInWithPassword({ email, password: p });
   $('login-btn').disabled = false; $('login-btn').textContent = 'Entrar';
