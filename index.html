@@ -2,115 +2,77 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Anchors every relative URL to the project path. Without this, opening the
-       link WITHOUT a trailing slash resolves ./style.css to the domain root (404)
-       and the page renders completely unstyled on phones. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <base href="/verdelago-lostfound/">
-  <!-- Public link works for anyone it's shared with; we don't invite search engines
-       to index guests' belongings. Change to "index" to make it Google-findable. -->
   <meta name="robots" content="noindex, nofollow">
-  <title>Perdidos e Achados - Verdelago</title>
+  <meta name="theme-color" content="#2E5E4E">
+  <title>Perdidos e Achados — Verdelago</title>
   <link rel="icon" type="image/svg+xml" href="./icon-green.svg">
-  <link rel="stylesheet" href="./style.css">
   <style>
-    /* read-only public tweaks + lightbox (kept out of the app stylesheet) */
-    .navbar__readonly{ font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
-      color:#2E5E4E; background:rgba(46,94,78,.10); padding:6px 12px; border-radius:20px; white-space:nowrap; }
-    .item-tile{ cursor:zoom-in; }
-    .lb{ position:fixed; inset:0; z-index:9998; background:rgba(15,23,20,.93); display:flex; align-items:center; justify-content:center; }
-    .lb[hidden]{ display:none; }
-    .lb__img{ max-width:92vw; max-height:80vh; border-radius:10px; box-shadow:0 12px 44px rgba(0,0,0,.5); }
-    .lb__cap{ position:absolute; bottom:22px; left:0; right:0; text-align:center; color:#fff; font-size:1rem; padding:0 16px; }
-    .lb__btn{ position:absolute; background:rgba(255,255,255,.15); color:#fff; border:none; cursor:pointer;
-      border-radius:50%; width:50px; height:50px; font-size:1.7rem; line-height:1; }
-    .lb__btn:hover{ background:rgba(255,255,255,.28); }
-    .lb__close{ top:20px; right:20px; }
-    .lb__prev{ left:16px; top:50%; transform:translateY(-50%); }
-    .lb__next{ right:16px; top:50%; transform:translateY(-50%); }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:#2E5E4E;color:#fff;display:flex;align-items:center;justify-content:center;
+      font-family:-apple-system,'Segoe UI',Roboto,sans-serif;padding:28px;text-align:center}
+    .box{max-width:420px;width:100%}
+    .logo{width:66px;height:auto;margin-bottom:18px;opacity:.95}
+    h1{font-size:1.45rem;margin:0 0 8px;font-weight:800}
+    p{margin:0 0 22px;opacity:.85;font-size:1rem;line-height:1.5}
+    .spin{width:44px;height:44px;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;
+      animation:s .8s linear infinite;margin:0 auto 22px}
+    @keyframes s{to{transform:rotate(360deg)}}
+    a.btn{display:block;background:#fff;color:#2E5E4E;text-decoration:none;padding:17px 28px;border-radius:15px;
+      font-weight:800;font-size:1.08rem;margin-top:10px}
+    a.ghost{display:block;color:#fff;text-decoration:underline;opacity:.75;font-size:.9rem;margin-top:16px}
+    .err{background:rgba(0,0,0,.22);border-radius:14px;padding:16px;font-size:.92rem;line-height:1.5;text-align:left}
+    .muted{opacity:.6;font-size:.8rem;margin-top:20px}
   </style>
 </head>
 <body>
-<div class="page-wrapper">
-  <nav class="navbar" style="position:fixed;">
-    <div class="navbar__inner">
-      <a href="./" class="navbar__brand">
-        <img src="./logo.svg" alt="Verdelago" style="height:28px;width:auto;">
-        <span class="navbar__divider"></span>
-        <span class="navbar__app-name">Perdidos e Achados</span>
-      </a>
-      <div class="navbar__nav">
-        <a href="./" class="navbar__link navbar__link--active">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-          Artigos
-        </a>
-        <a href="./painel.html" class="navbar__link">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-          Painel
-        </a>
-      </div>
-      <div class="navbar__user">
-        <span class="navbar__readonly">Consulta pública</span>
-      </div>
+  <div class="box">
+    <svg class="logo" viewBox="0 0 124 103" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M56.909 74.692l-.764-4.157 1.986 6.351zm66.382-35.553l-1.164-1.507L68.91 78.744l45.214-51.79-1.435-1.253-45.652 52.294 34.357-61.707-1.663-.926-34.256 61.524L87.627 6.047 85.81 5.48 63.647 76.348 71.094.185 69.199 0l-7.397 75.654L54.406 0l-1.895.185 7.446 76.163-6.66-21.298-5.185-28.19-1.872.345 2.357 12.817L37.794 5.479l-1.817.568 15.468 49.46L54.018 69.5l-.283-.509L37.748 28.6l-1.77.701 10.675 26.972-22.778-40.91-1.663.926 29.799 53.52.559 1.413-25.39-38.214-1.586 1.053 23.508 35.381-38.186-43.74-1.434 1.252L36.568 57.98 16.534 38.192l-1.338 1.354 34.372 33.95-10.127-6.536L1.477 37.632.314 39.139l20.204 15.608-12.83-8.28-1.033 1.6 31.687 20.449 6.467 4.996L2.264 56.636l-.702 1.77L47.89 76.782.324 68.554 0 70.43l47.532 8.222-45.605 1.566.065 1.902L47.8 80.548l-43.688 10.9.46 1.847 43.032-10.736-39.218 18.468.811 1.723 45.64-21.492 6.966 5.403z"/></svg>
+    <div id="loading">
+      <div class="spin"></div>
+      <h1>Perdidos &amp; Achados</h1>
+      <p>A abrir a aplicação…</p>
     </div>
-  </nav>
-
-  <main class="page-content">
-    <div class="container">
-      <!-- Header -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:12px;flex-wrap:wrap;">
-        <h1 style="font-size:1.55rem;font-weight:800;margin:0;letter-spacing:-0.025em;color:#0D1117;">Perdidos e Achados</h1>
-        <span id="updated" style="font-size:0.78rem;color:#8A948C;"></span>
-      </div>
-
-      <!-- Filters + search -->
-      <form id="searchForm" onsubmit="return false;">
-        <div class="filter-bar">
-          <div class="filter-bar__pills" id="pills">
-            <a href="#" class="fpill fpill--active" data-status="">Todos <span class="fpill__n" data-count="all"></span></a>
-            <a href="#" class="fpill" data-status="found">Encontrados <span class="fpill__n" data-count="found"></span></a>
-            <a href="#" class="fpill" data-status="stored">Armazenados <span class="fpill__n" data-count="stored"></span></a>
-          </div>
-          <div class="filter-bar__search">
-            <div class="search-field">
-              <svg class="search-field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" id="search" class="search-field__input" placeholder="Pesquisar..." autocomplete="off">
-            </div>
-            <select id="category" class="form-select" style="max-width:145px;font-size:0.81rem;min-height:38px;border-radius:20px;border:1.5px solid #E4EBE5;flex-shrink:0;">
-              <option value="">Categoria</option>
-            </select>
-          </div>
-        </div>
-      </form>
-
-      <!-- Grid -->
-      <div id="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px;"></div>
-
-      <!-- Empty state -->
-      <div id="empty" class="empty-state" style="padding:70px 20px;" hidden>
-        <svg class="empty-state__icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <div class="empty-state__title">Nenhum artigo encontrado</div>
-        <p class="empty-state__text">Tente ajustar os filtros ou a pesquisa.</p>
-      </div>
+    <div id="manual" style="display:none">
+      <h1>Perdidos &amp; Achados</h1>
+      <p>Toque para abrir a aplicação.</p>
+      <a class="btn" id="go" href="#">Abrir aplicação</a>
+      <a class="ghost" href="./catalogo.html">Ver apenas a lista (sem entrar)</a>
     </div>
-  </main>
-</div>
-
-<footer class="footer">
-  <div class="container">
-    <p class="footer__text">Verdelago Resort &mdash; Perdidos e Achados</p>
+    <div id="fail" style="display:none">
+      <h1>Indisponível</h1>
+      <div class="err">
+        Não foi possível contactar o PC do resort neste momento. Costuma resolver-se em poucos minutos.
+        <br><br>Na rede do resort: <b>172.27.90.228:3500</b>
+      </div>
+      <a class="ghost" href="./catalogo.html">Ver a lista de artigos</a>
+    </div>
+    <p class="muted">Verdelago Resort</p>
   </div>
-</footer>
 
-<!-- Lightbox -->
-<div id="lightbox" class="lb" hidden>
-  <button class="lb__btn lb__close" aria-label="Fechar">&times;</button>
-  <button class="lb__btn lb__prev" aria-label="Anterior">&#8249;</button>
-  <img id="lb-img" class="lb__img" alt="">
-  <button class="lb__btn lb__next" aria-label="Seguinte">&#8250;</button>
-  <div id="lb-cap" class="lb__cap"></div>
-</div>
-
-<script src="./app.js" defer></script>
+  <script>
+    // GitHub Pages only serves static files — it cannot run the Node app, hold a
+    // login session or receive photo uploads. So this page is a permanent door:
+    // the resort PC publishes its current public address to link.json (its free
+    // Cloudflare tunnel changes hostname on every restart) and we forward to it.
+    // Result: one link that never changes, opening the REAL application.
+    fetch('./link.json?v=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) {
+        if (!d || !d.app) throw new Error('sem url');
+        document.getElementById('go').href = d.app;
+        // Some in-app browsers block automatic redirects — show a button too.
+        setTimeout(function () {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('manual').style.display = 'block';
+        }, 2500);
+        location.replace(d.app);
+      })
+      .catch(function () {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('fail').style.display = 'block';
+      });
+  </script>
 </body>
 </html>
