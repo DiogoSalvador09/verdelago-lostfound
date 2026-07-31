@@ -67,6 +67,27 @@ async function createItem(fields, files) {
   return row;
 }
 
+/* ================= One-year sign-in ================= */
+// Supabase can enforce this server-side (sessions_timebox) but only on paid
+// plans, so we hold the clock here: the session itself refreshes forever, and
+// after a year we deliberately sign out and ask for the password again.
+const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+function stampAuth() { try { localStorage.setItem('auth_since', String(Date.now())); } catch (e) {} }
+function authAge() {
+  try { const v = parseInt(localStorage.getItem('auth_since') || '0', 10); return v ? Date.now() - v : null; }
+  catch (e) { return null; }
+}
+async function enforceYear(session) {
+  const age = authAge();
+  if (age === null) { stampAuth(); return session; }   // first time we've seen it — start the clock
+  if (age > YEAR_MS) {
+    await sb.auth.signOut();
+    try { localStorage.removeItem('auth_since'); } catch (e) {}
+    return null;
+  }
+  return session;
+}
+
 /* ================= Auth / routing ================= */
 function showLogin(msg) {
   $('appwrap').hidden = true; $('hk').hidden = true; $('login').style.display = 'flex';
@@ -85,6 +106,7 @@ async function doLogin() {
   const { data, error } = await sb.auth.signInWithPassword({ email, password: p });
   $('login-btn').disabled = false; $('login-btn').textContent = 'Entrar';
   if (error || !data.session) { const e = $('login-err'); e.textContent = 'Utilizador ou palavra-passe inválidos.'; e.style.display = 'block'; return; }
+  stampAuth();
   route(data.session);
 }
 $('login-btn').addEventListener('click', doLogin);
@@ -276,12 +298,19 @@ async function tryQrLogin() {
   history.replaceState(null, '', location.pathname + location.search);
   if (!creds) return null;
   const { data, error } = await sb.auth.signInWithPassword({ email: creds.email, password: creds.password });
-  return (error || !data.session) ? null : data.session;
+  if (error || !data.session) return null;
+  stampAuth();
+  return data.session;
 }
 
 (async () => {
   const { data } = await sb.auth.getSession();
-  if (data && data.session) { route(data.session); return; }
+  if (data && data.session) {
+    const still = await enforceYear(data.session);
+    if (still) { route(still); return; }
+    showLogin('Passou um ano desde a última entrada. Introduza a palavra-passe novamente.');
+    return;
+  }
   const qr = await tryQrLogin();
   if (qr) { route(qr); return; }
   showLogin();
