@@ -103,15 +103,26 @@
     .hk-chips button.sel{ background:rgba(184,148,62,.14); border-color:#B8943E; color:#F4EFE6; }
     /* underline input, no box */
     .field{ position:relative; margin:0 0 38px; }
+    /* !important throughout: the app's global stylesheet paints every input as a
+       white rounded box, which would bury this field (cream text on white). */
     #hk-onboard input{
-      width:100%; box-sizing:border-box; background:transparent; border:none;
-      border-bottom:1px solid rgba(244,239,230,.22); border-radius:0;
-      padding:14px 4px; font-size:1.15rem; font-family:inherit; font-weight:300;
-      color:#F4EFE6; text-align:center; letter-spacing:.02em; outline:none;
-      transition:border-color .4s ease;
+      width:100%; box-sizing:border-box;
+      background:transparent !important; background-color:transparent !important;
+      border:none !important; border-bottom:1px solid rgba(244,239,230,.22) !important;
+      border-radius:0 !important; box-shadow:none !important;
+      padding:14px 4px !important; font-size:1.15rem; font-family:inherit; font-weight:300;
+      color:#F4EFE6 !important; text-align:center; letter-spacing:.02em; outline:none;
+      transition:border-color .4s ease; -webkit-appearance:none; appearance:none;
     }
-    #hk-onboard input::placeholder{ color:rgba(244,239,230,.3); font-weight:300; }
-    #hk-onboard input:focus{ border-bottom-color:rgba(184,148,62,.5); }
+    #hk-onboard input::placeholder{ color:rgba(244,239,230,.32) !important; font-weight:300; }
+    #hk-onboard input:focus{ border-bottom-color:rgba(184,148,62,.55) !important; }
+    /* stop the browser's autofill from repainting it white */
+    #hk-onboard input:-webkit-autofill,
+    #hk-onboard input:-webkit-autofill:focus{
+      -webkit-text-fill-color:#F4EFE6 !important;
+      -webkit-box-shadow:0 0 0 1000px transparent inset !important;
+      transition:background-color 9999s ease-in-out 0s;
+    }
     /* the lit underline that grows from the centre on focus */
     .field::after{
       content:''; position:absolute; left:50%; bottom:0; width:0; height:1px;
