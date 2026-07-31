@@ -46,27 +46,15 @@ $count = (Get-Content -LiteralPath (Join-Path $SITE 'data.json') -Raw | ConvertF
 $msg = "sync {0} - {1} artigos" -f (Get-Date).ToString('yyyy-MM-dd HH:mm'), $count
 & $GIT -c user.name='Diogo Salvador' -c user.email='diogosalvador2003@gmail.com' commit -q -m $msg | Out-Null
 
-# 3) push with a token pulled from the Windows vault (never prompts, never logged)
-Add-Type @'
-using System; using System.Runtime.InteropServices;
-public class CredManP {
-  [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
-  public struct CREDENTIAL { public uint Flags; public uint Type; public IntPtr TargetName; public IntPtr Comment;
-    public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten; public uint CredentialBlobSize; public IntPtr CredentialBlob;
-    public uint Persist; public uint AttributeCount; public IntPtr Attributes; public IntPtr TargetAlias; public IntPtr UserName; }
-  [DllImport("advapi32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
-  public static extern bool CredRead(string t, uint ty, uint f, out IntPtr c);
-  [DllImport("advapi32.dll")] public static extern void CredFree(IntPtr c);
-  public static byte[] Read(string t){ IntPtr p; if(!CredRead(t,1,0,out p)) return null;
-    try{ CREDENTIAL c=(CREDENTIAL)Marshal.PtrToStructure(p,typeof(CREDENTIAL)); byte[] b=new byte[c.CredentialBlobSize];
-    if(c.CredentialBlobSize>0) Marshal.Copy(c.CredentialBlob,b,0,(int)c.CredentialBlobSize); return b; } finally { CredFree(p); } }
-}
-'@
-$env:GIT_TERMINAL_PROMPT='0'
-$bt = [CredManP]::Read('git:https://github.com')
-if ($bt) { $tok = [Text.Encoding]::Unicode.GetString($bt).Trim([char]0).Trim() } else { $tok = '' }
-if ($tok -notmatch '^(gh[pousr]_|github_pat_)') { Log 'PUSH ERROR: no token in credential store'; exit 1 }
-$out = (& $GIT push ("https://$tok@github.com/$OWNER/$REPO.git") 'main:main' 2>&1) | ForEach-Object { $_ -replace [regex]::Escape($tok),'***' }
-$ex = $LASTEXITCODE; $tok = $null; $bt = $null
+# 3) push over SSH with a repo deploy key.
+# Deliberately NOT a personal access token: the PAT on this box expires 2026-08-12,
+# and when it did the publish would fail silently -> link.json goes stale -> every
+# staff link forwards to a dead tunnel. Deploy keys do not expire.
+$env:GIT_TERMINAL_PROMPT = '0'
+$KEY = "$env:USERPROFILE\.ssh\verdelago_lostfound_deploy"
+if (-not (Test-Path $KEY)) { Log 'PUSH ERROR: deploy key missing'; exit 1 }
+$env:GIT_SSH_COMMAND = "ssh -i `"$KEY`" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=`"$env:USERPROFILE\.ssh\known_hosts`""
+$out = & $GIT push ("git@github.com:$OWNER/$REPO.git") 'main:main' 2>&1
+$ex = $LASTEXITCODE
 if ($ex -ne 0) { Log ("PUSH ERROR (exit $ex): " + ($out -join ' ')); exit 1 }
 Log ("pushed: $count artigos")
