@@ -197,7 +197,7 @@ $('up-again').addEventListener('click', () => { closeUp(); $('up').hidden = fals
 /* ================= Housekeeping (upload-only) ================= */
 let hkFiles = [];
 function initHK() {
-  $('hk').hidden = false;
+  $('appwrap').hidden = true; $('hk').hidden = false;
   let name = ''; try { name = localStorage.getItem('hk_name') || ''; } catch (e) {}
   if (name) startHKMain(name); else showOnboard();
 }

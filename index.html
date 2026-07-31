@@ -20,6 +20,8 @@
     #login .err{ background:rgba(0,0,0,.22); border-radius:10px; padding:11px; font-size:.88rem; margin-bottom:12px; display:none; }
     #login .muted{ opacity:.6; font-size:.78rem; margin-top:18px; }
     .navbar__readonly{ font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#2E5E4E;background:rgba(46,94,78,.10);padding:6px 12px;border-radius:20px;cursor:pointer;border:none; }
+    /* id-selector so [hidden] actually wins over .page-wrapper's display rule */
+    #appwrap[hidden]{ display:none !important; }
     .item-tile{ cursor:zoom-in; }
     /* lightbox */
     .lb{ position:fixed;inset:0;z-index:120;background:rgba(15,23,20,.93);display:flex;align-items:center;justify-content:center; }
