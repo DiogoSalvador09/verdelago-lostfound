@@ -153,16 +153,20 @@ async function loadItems() {
 }
 function buildCats() {
   const sel = $('catf'); sel.length = 1;
-  [...new Set(ITEMS.map(i => i.category).filter(Boolean))].sort((a, b) => clabel(a).localeCompare(clabel(b), 'pt'))
+  [...new Set(ITEMS.filter(onShelf).map(i => i.category).filter(Boolean))].sort((a, b) => clabel(a).localeCompare(clabel(b), 'pt'))
     .forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = clabel(c); sel.appendChild(o); });
 }
+// Once an item is handed back it belongs to the Devoluções tab, not the shelf.
+const onShelf = (it) => it.status !== 'returned';
 function updateCounts() {
-  const s = { all: ITEMS.length, found: ITEMS.filter(i => i.status === 'found').length, stored: ITEMS.filter(i => i.status === 'stored').length };
+  const live = ITEMS.filter(onShelf);
+  const s = { all: live.length, found: live.filter(i => i.status === 'found').length, stored: live.filter(i => i.status === 'stored').length };
   document.querySelectorAll('#pills .fpill__n').forEach(n => n.textContent = s[n.dataset.c]);
 }
 function currentList() {
   const q = $('q').value.trim().toLowerCase(), cat = $('catf').value;
   return ITEMS.filter(it => {
+    if (!onShelf(it)) return false;
     if (status && it.status !== status) return false;
     if (cat && it.category !== cat) return false;
     if (!q) return true;
