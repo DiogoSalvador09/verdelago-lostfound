@@ -13,9 +13,13 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Perdidos">
-  <link rel="stylesheet" href="./style.css">
+  <!-- ?v= on every asset: GitHub Pages serves these with Cache-Control max-age=600,
+       so without a changing URL a deploy can stay invisible on staff phones for
+       10+ minutes (or until the service worker re-caches the stale copy).
+       BUMP THIS TOGETHER WITH `CACHE` IN sw.js ON EVERY RELEASE. -->
+  <link rel="stylesheet" href="./style.css?v=7">
   <!-- dark-luxe theme; must load AFTER style.css to override the light defaults -->
-  <link rel="stylesheet" href="./luxe.css">
+  <link rel="stylesheet" href="./luxe.css?v=7">
   <style>
     /* login */
     #login{ position:fixed; inset:0; background:#2E5E4E; color:#fff; display:flex; align-items:center; justify-content:center; padding:26px; z-index:100; }
@@ -496,7 +500,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js"></script>
-  <script src="./sbapp.js" defer></script>
+  <script src="./config.js?v=7"></script>
+  <script src="./sbapp.js?v=7" defer></script>
 </body>
 </html>
