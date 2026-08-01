@@ -684,8 +684,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const dismiss = $('install-no');
   if (dismiss) dismiss.addEventListener('click', () => { $('install-bar').hidden = true; });
 });
+/* ================= Build stamp + self-update ================= */
+// Shown in the navbar so anyone can say which build they are actually running —
+// "it must be cached" is a guess until someone can read the number off screen.
+const BUILD = 'v8';
+const stamp = $('build'); if (stamp) stamp.textContent = BUILD;
+
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  // If a worker was already in charge, a new one taking over means new assets
+  // are live — reload once so staff are never left on the previous build.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true; location.reload();
+  });
+  window.addEventListener('load', () => {
+    // updateViaCache:'none' — never let the HTTP cache hand back an old sw.js,
+    // which would freeze the whole update path.
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+      .then((reg) => reg.update().catch(() => {}))
+      .catch(() => {});
+  });
 }
 
 /* ================= Boot ================= */

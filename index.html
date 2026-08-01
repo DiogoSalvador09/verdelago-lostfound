@@ -17,9 +17,9 @@
        so without a changing URL a deploy can stay invisible on staff phones for
        10+ minutes (or until the service worker re-caches the stale copy).
        BUMP THIS TOGETHER WITH `CACHE` IN sw.js ON EVERY RELEASE. -->
-  <link rel="stylesheet" href="./style.css?v=7">
+  <link rel="stylesheet" href="./style.css?v=8">
   <!-- dark-luxe theme; must load AFTER style.css to override the light defaults -->
-  <link rel="stylesheet" href="./luxe.css?v=7">
+  <link rel="stylesheet" href="./luxe.css?v=8">
   <style>
     /* login */
     #login{ position:fixed; inset:0; background:#2E5E4E; color:#fff; display:flex; align-items:center; justify-content:center; padding:26px; z-index:100; }
@@ -31,6 +31,7 @@
     #login .err{ background:rgba(0,0,0,.22); border-radius:10px; padding:11px; font-size:.88rem; margin-bottom:12px; display:none; }
     #login .muted{ opacity:.6; font-size:.78rem; margin-top:18px; }
     .navbar__readonly{ font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#2E5E4E;background:rgba(46,94,78,.10);padding:6px 12px;border-radius:20px;cursor:pointer;border:none; }
+    #build{ font-size:.66rem;letter-spacing:.1em;color:#A3ABA5;margin-right:10px;user-select:all; }
     /* id-selector so [hidden] actually wins over .page-wrapper's display rule */
     #appwrap[hidden]{ display:none !important; }
     .item-tile{ cursor:pointer; }
@@ -325,6 +326,7 @@
           <span class="navbar__app-name">Perdidos e Achados</span>
         </a>
         <div class="navbar__user">
+          <span id="build" title="versão da aplicação"></span>
           <button class="navbar__readonly" id="logout">Sair</button>
         </div>
       </div>
@@ -500,7 +502,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js?v=7"></script>
-  <script src="./sbapp.js?v=7" defer></script>
+  <script src="./config.js?v=8"></script>
+  <script src="./sbapp.js?v=8" defer></script>
 </body>
 </html>
