@@ -316,10 +316,11 @@ const fmtDate = (s) => {
   const d = new Date(s);
   return isNaN(d) ? String(s) : d.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
 };
-const SOURCE_L = { app: 'Registado na app', housekeeping: 'Housekeeping', web: 'Dashboard',
-  migrado: 'Importado do sistema antigo', import: 'Importado do sistema antigo' };
-// never let a raw database value reach the screen — "migrado" did exactly that
-const slabel = (s) => SOURCE_L[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+// "Origem" only earns a row when it tells reception something they can act on.
+// 75 of 76 items say they came from the old system, which is noise — so those
+// show nothing at all rather than a line nobody can interpret.
+const SOURCE_L = { app: 'Registado na app', housekeeping: 'Registado pelo housekeeping', web: 'Registado na app' };
+const slabel = (s) => SOURCE_L[s] || '';
 const ST_FLOW = [['found', 'Encontrado'], ['stored', 'Armazenado'], ['returned', 'Devolvido'], ['disposed', 'Descartado']];
 
 /* ---------- The return record ----------
@@ -690,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= Build stamp + self-update ================= */
 // Shown in the navbar so anyone can say which build they are actually running —
 // "it must be cached" is a guess until someone can read the number off screen.
-const BUILD = 'v9';
+const BUILD = 'v10';
 const stamp = $('build'); if (stamp) stamp.textContent = BUILD;
 
 if ('serviceWorker' in navigator) {

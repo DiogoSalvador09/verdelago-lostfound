@@ -186,7 +186,9 @@ html, body{
   border-bottom: 1px solid var(--hair-soft); color: var(--sage-deep) !important;
 }
 #up .top b, .hk-hi{ color: var(--sage-deep) !important; }
-#up .top .x, .hk-menu{ color: var(--sage-mid) !important; }
+/* the close button must stay solid and high-contrast — see index.html */
+#up .top .x{ background: var(--sage) !important; color:#fff !important; }
+.hk-menu{ color: var(--sage-mid) !important; }
 #up label, #hk label{ color: var(--ink-soft) !important; letter-spacing:.14em; text-transform:uppercase; font-size:.66rem !important; font-weight:500 !important; }
 #up input[type=text], #up select, #hk input[type=text]{
   background: var(--paper) !important; background-color: var(--paper) !important;
