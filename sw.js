@@ -1,7 +1,7 @@
 /* Minimal service worker — exists so Android treats this as an installable app.
    Deliberately network-first: staff must always see live data, so we never serve
    a stale item list from cache. The cache is only a fallback when offline. */
-const CACHE = 'verdelago-lf-v2';
+const CACHE = 'verdelago-lf-v3';
 const SHELL = ['./', './index.html', './style.css', './luxe.css', './sbapp.js', './config.js', './logo.svg', './logo-cream.svg', './icon-green.svg'];
 
 self.addEventListener('install', (e) => {

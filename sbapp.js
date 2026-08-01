@@ -185,7 +185,9 @@ function tile(it, idx) {
   bot.querySelector('.item-tile__title').textContent = it.title || 'Artigo';
   bot.querySelector('.item-tile__meta').textContent = it.found_location || clabel(it.category);
   a.appendChild(top); a.appendChild(bot);
-  if (it.photos && it.photos.length) a.addEventListener('click', () => openLb(it));
+  // every tile opens the full record — items without a photo included
+  a.addEventListener('click', () => openDetail(it));
+  a.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(it); } });
   return a;
 }
 function render() {
@@ -274,26 +276,198 @@ $('view-seg').addEventListener('click', (e) => {
   if (showItems) render(); else loadStaff();
 });
 
-/* lightbox */
-let lbSet = [], lbIdx = 0;
-async function openLb(it) {
-  const { data } = await sb.storage.from('items').createSignedUrls(it.photos, 3600);
-  lbSet = (data || []).map(d => d.signedUrl).filter(Boolean); lbIdx = 0;
-  if (!lbSet.length) return;
-  $('lb-img').src = lbSet[0]; $('lb').hidden = false; document.body.style.overflow = 'hidden';
+/* ================= Full-screen layers (detail, upload, lightbox) =================
+   Every layer must be closable three ways — its own visible Voltar/×, the Esc
+   key, and the phone's Back button — otherwise a phone with no visible browser
+   chrome traps the user until they reload. Each open pushes a history entry;
+   the close buttons just go back, and popstate does the actual closing, so the
+   stack and the DOM can never disagree. */
+const LAYERS = [];
+function pushLayer(closeFn) {
+  LAYERS.push(closeFn);
+  document.body.style.overflow = 'hidden';
+  try { history.pushState({ lf: LAYERS.length }, ''); } catch (e) {}
 }
-function lbStep(d) { lbIdx = (lbIdx + d + lbSet.length) % lbSet.length; $('lb-img').src = lbSet[lbIdx]; }
-$('lb').querySelector('.cl').addEventListener('click', () => { $('lb').hidden = true; document.body.style.overflow = ''; });
-$('lb').querySelector('.pv').addEventListener('click', () => lbStep(-1));
-$('lb').querySelector('.nx').addEventListener('click', () => lbStep(1));
+function closeLayer() {                       // called by Voltar / × / Esc
+  if (!LAYERS.length) return;
+  try { history.back(); } catch (e) { runTopLayer(); }
+}
+function runTopLayer() {
+  const fn = LAYERS.pop();
+  if (fn) fn();
+  if (!LAYERS.length) document.body.style.overflow = '';
+}
+window.addEventListener('popstate', () => { if (LAYERS.length) runTopLayer(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && LAYERS.length) closeLayer(); });
+
+/* ================= Item detail ================= */
+const fmtDate = (s) => {
+  if (!s) return null;
+  const d = new Date(s);
+  return isNaN(d) ? String(s) : d.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+const SOURCE_L = { app: 'Registado na app', housekeeping: 'Housekeeping', web: 'Dashboard', import: 'Importado' };
+const ST_FLOW = [['found', 'Encontrado'], ['stored', 'Armazenado'], ['returned', 'Devolvido'], ['disposed', 'Descartado']];
+
+let DV = null;                 // item currently on screen
+let dvPhotos = [], dvIdx = 0;  // signed urls for its photos
+
+async function openDetail(it) {
+  DV = it; dvPhotos = []; dvIdx = 0;
+  $('dv-top-title').textContent = it.title || 'Artigo';
+  $('dv').hidden = false;
+  $('dv').scrollTop = 0;
+  pushLayer(() => { $('dv').hidden = true; DV = null; });
+  renderDetail();
+  if (it.photos && it.photos.length) {
+    const { data } = await sb.storage.from('items').createSignedUrls(it.photos, 3600);
+    if (DV !== it) return;                     // closed (or another item opened) while signing
+    dvPhotos = (data || []).map(d => d.signedUrl).filter(Boolean);
+    renderDetail();
+  }
+}
+$('dv-back').addEventListener('click', closeLayer);
+
+function row(k, v, opts) {
+  if (v == null || v === '' ) { if (!(opts && opts.always)) return ''; }
+  const empty = (v == null || v === '');
+  const d = document.createElement('div'); d.className = 'dv-row';
+  const kk = document.createElement('span'); kk.className = 'dv-row__k'; kk.textContent = k;
+  const vv = document.createElement('span'); vv.className = 'dv-row__v' + (empty ? ' dv-row__v--muted' : '');
+  vv.textContent = empty ? '—' : String(v);              // textContent: staff-entered text can never inject markup
+  d.appendChild(kk); d.appendChild(vv);
+  return d.outerHTML;
+}
+
+function renderDetail() {
+  const it = DV; if (!it) return;
+  const body = $('dv-body');
+  const days = it.found_date ? Math.floor((Date.now() - new Date(it.found_date).getTime()) / 864e5) : -1;
+  const left = 90 - days;
+  const tcol = left <= 7 ? '#DC2626' : (left <= 30 ? '#D97706' : '#2E5E4E');
+  const pct = Math.max(0, Math.min(100, (days / 90) * 100));
+  const active = it.status !== 'returned' && it.status !== 'disposed';
+
+  const hero = dvPhotos.length
+    ? `<div class="dv-hero" id="dv-hero"><img src="${dvPhotos[dvIdx]}" alt="">${dvPhotos.length > 1 ? `<span class="dv-hero__n">${dvIdx + 1} / ${dvPhotos.length}</span>` : ''}</div>`
+    : (it.photos && it.photos.length
+        ? `<div class="dv-hero"><span style="color:#8FA096;font-size:.85rem;">A carregar foto…</span></div>`
+        : `<div class="dv-hero" style="cursor:default;"><svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="rgba(46,94,78,.20)" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`);
+
+  const thumbs = dvPhotos.length > 1
+    ? `<div class="dv-thumbs">${dvPhotos.map((u, i) => `<div class="dv-thumb${i === dvIdx ? ' dv-thumb--on' : ''}" data-i="${i}"><img src="${u}" alt=""></div>`).join('')}</div>`
+    : '';
+
+  const notes = [it.description, it.notes].filter(Boolean).join('\n\n');
+
+  body.innerHTML = `
+    ${hero}${thumbs}
+    <div class="dv-head">
+      <h1 class="dv-title" id="dv-title"></h1>
+      <span class="gbadge gbadge--${esc(it.status)}" style="flex:0 0 auto;margin-top:6px;"><span class="gbadge__dot"></span>${SL[it.status] || esc(it.status)}</span>
+    </div>
+    <p class="dv-sub" id="dv-sub"></p>
+
+    <div class="dv-card">
+      ${row('Local encontrado', it.found_location, { always: true })}
+      ${row('Onde está guardado', it.storage_location, { always: true })}
+      ${row('Categoria', clabel(it.category))}
+      ${row('Encontrado por', it.found_by, { always: true })}
+      ${row('Data', fmtDate(it.found_date), { always: true })}
+      ${row('Registado em', fmtDate(it.created_at))}
+      ${row('Origem', SOURCE_L[it.source] || it.source)}
+      ${row('Quarto', it.linked_room)}
+      ${row('Hóspede', it.linked_name)}
+      ${row('Devolvido a', it.claimed_by)}
+      ${row('Data devolução', fmtDate(it.claimed_date))}
+      ${row('Notas devolução', it.claimed_id_notes)}
+    </div>
+
+    ${notes ? `<div class="dv-label">Notas</div><div class="dv-card"><div class="dv-notes" id="dv-notes"></div></div>` : ''}
+
+    ${active && days >= 0 ? `
+      <div class="dv-card">
+        <div class="dv-timer">
+          <div class="dv-timer__head">
+            <span class="dv-timer__label">Prazo de 3 meses</span>
+            <span class="dv-timer__val" style="color:${tcol};">${left <= 0 ? 'Expirado!' : left + 'd restantes'}</span>
+          </div>
+          <div class="dv-timer__track"><div class="dv-timer__fill" style="width:${pct}%;background:${tcol};"></div></div>
+          <div class="dv-timer__foot"><span>${fmtDate(it.found_date) || ''}</span><span>${days}d de 90</span></div>
+        </div>
+      </div>` : ''}
+
+    <div class="dv-saving" id="dv-saving" hidden>A guardar…</div>
+
+    <div class="dv-label">Estado</div>
+    <div class="dv-pills" id="dv-status">
+      ${ST_FLOW.map(([v, l]) => `<button class="dv-pill${it.status === v ? ' dv-pill--on' : ''}" data-st="${v}">${l}</button>`).join('')}
+    </div>
+
+    <div class="dv-label">Mover para</div>
+    <div class="dv-pills" id="dv-store">
+      ${STORES.filter(Boolean).map(s => `<button class="dv-pill${it.storage_location === s ? ' dv-pill--on' : ''}" data-loc="${esc(s)}">${esc(s)}</button>`).join('')}
+    </div>`;
+
+  $('dv-title').textContent = it.title || 'Artigo';
+  $('dv-sub').textContent = [clabel(it.category), fmtDate(it.found_date)].filter(Boolean).join(' · ');
+  if (notes) $('dv-notes').textContent = notes;
+
+  const heroEl = $('dv-hero');
+  if (heroEl) heroEl.addEventListener('click', () => openLb(dvPhotos, dvIdx));
+  body.querySelectorAll('.dv-thumb').forEach(t => t.addEventListener('click', () => { dvIdx = +t.dataset.i; renderDetail(); }));
+  $('dv-status').querySelectorAll('.dv-pill').forEach(b => b.addEventListener('click', () => saveDetail({ status: b.dataset.st })));
+  $('dv-store').querySelectorAll('.dv-pill').forEach(b => b.addEventListener('click', () => {
+    // tapping the current location again clears it
+    saveDetail({ storage_location: it.storage_location === b.dataset.loc ? '' : b.dataset.loc });
+  }));
+}
+
+async function saveDetail(patch) {
+  const it = DV; if (!it) return;
+  const box = $('dv-saving'); if (box) box.hidden = false;
+  const { error } = await sb.from('items').update(patch).eq('id', it.id);
+  if (box) box.hidden = true;
+  if (error) { alert('Não foi possível guardar: ' + (error.message || error)); return; }
+  Object.assign(it, patch);                       // ITEMS holds the same object reference
+  renderDetail(); updateCounts(); render();
+}
+
+/* ================= Lightbox ================= */
+let lbSet = [], lbIdx = 0;
+function openLb(urls, start) {
+  lbSet = (urls || []).filter(Boolean); lbIdx = start || 0;
+  if (!lbSet.length) return;
+  lbPaint();
+  $('lb').hidden = false;
+  pushLayer(() => { $('lb').hidden = true; });
+}
+function lbPaint() {
+  $('lb-img').src = lbSet[lbIdx];
+  const c = $('lb-count');
+  if (c) { c.textContent = lbSet.length > 1 ? `${lbIdx + 1} / ${lbSet.length}` : ''; c.hidden = lbSet.length < 2; }
+  const multi = lbSet.length > 1;
+  $('lb').querySelector('.pv').hidden = !multi;
+  $('lb').querySelector('.nx').hidden = !multi;
+}
+function lbStep(d) { lbIdx = (lbIdx + d + lbSet.length) % lbSet.length; lbPaint(); }
+$('lb').querySelector('.cl').addEventListener('click', closeLayer);
+$('lb').querySelector('.pv').addEventListener('click', (e) => { e.stopPropagation(); lbStep(-1); });
+$('lb').querySelector('.nx').addEventListener('click', (e) => { e.stopPropagation(); lbStep(1); });
+// tapping the dark area closes too — the × alone is easy to miss on a phone
+$('lb').addEventListener('click', (e) => { if (e.target.id === 'lb') closeLayer(); });
 
 /* manager +Novo modal */
 let selected = [];
 CATS.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = clabel(c); $('up-cat').appendChild(o); });
 STORES.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s || '— não definido —'; $('up-store').appendChild(o); });
-$('new-btn').addEventListener('click', () => { $('up').hidden = false; });
-$('up-close').addEventListener('click', closeUp);
-function closeUp() { $('up').hidden = true; selected = []; $('up-prev').innerHTML = ''; $('up-form').reset(); $('up-sending').hidden = true; $('up-done').hidden = true; }
+$('new-btn').addEventListener('click', () => {
+  resetUp(); $('up').hidden = false;
+  pushLayer(() => { $('up').hidden = true; resetUp(); });
+});
+$('up-close').addEventListener('click', closeLayer);
+$('up-back').addEventListener('click', closeLayer);
+function resetUp() { selected = []; $('up-prev').innerHTML = ''; $('up-form').reset(); $('up-sending').hidden = true; $('up-done').hidden = true; }
 $('up-title').addEventListener('input', () => { $('up-cat').value = guessCat($('up-title').value); });
 $('up-img').addEventListener('change', function () { Array.prototype.forEach.call(this.files, f => { if (selected.length < 5) selected.push(f); }); renderPrev($('up-prev'), selected); });
 function renderPrev(box, arr) {
@@ -314,7 +488,8 @@ $('up-form').addEventListener('submit', async (e) => {
     $('up-sending').hidden = true; $('up-done').hidden = false; await loadItems();
   } catch (err) { $('up-sending').hidden = true; alert('Não foi possível registar: ' + (err.message || err)); }
 });
-$('up-again').addEventListener('click', () => { closeUp(); $('up').hidden = false; });
+// stay on the sheet — closing and reopening would push a second history entry
+$('up-again').addEventListener('click', resetUp);
 
 /* ================= Housekeeping (upload-only) ================= */
 let hkFiles = [];

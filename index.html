@@ -29,13 +29,72 @@
     .navbar__readonly{ font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#2E5E4E;background:rgba(46,94,78,.10);padding:6px 12px;border-radius:20px;cursor:pointer;border:none; }
     /* id-selector so [hidden] actually wins over .page-wrapper's display rule */
     #appwrap[hidden]{ display:none !important; }
-    .item-tile{ cursor:zoom-in; }
+    .item-tile{ cursor:pointer; }
     /* lightbox */
     .lb{ position:fixed;inset:0;z-index:120;background:rgba(15,23,20,.93);display:flex;align-items:center;justify-content:center; }
     .lb[hidden]{ display:none; }
-    .lb img{ max-width:92vw;max-height:80vh;border-radius:10px; }
-    .lb button{ position:absolute;background:rgba(255,255,255,.15);color:#fff;border:none;cursor:pointer;border-radius:50%;width:50px;height:50px;font-size:1.7rem; }
-    .lb .cl{ top:20px;right:20px; } .lb .pv{ left:16px;top:50%;transform:translateY(-50%); } .lb .nx{ right:16px;top:50%;transform:translateY(-50%); }
+    .lb img{ max-width:92vw;max-height:80vh;border-radius:10px; position:relative;z-index:1; }
+    .lb button{ position:absolute;z-index:2;background:rgba(255,255,255,.15);color:#fff;border:none;cursor:pointer;border-radius:50%;width:50px;height:50px;font-size:1.7rem;font-family:inherit; }
+    /* the close button used to sit under the phone's status bar / notch */
+    .lb .cl{ top:calc(16px + env(safe-area-inset-top,0));right:16px; }
+    .lb .pv{ left:16px;top:50%;transform:translateY(-50%); } .lb .nx{ right:16px;top:50%;transform:translateY(-50%); }
+    .lb .lb-count{ position:absolute;z-index:2;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom,0));
+      color:rgba(255,255,255,.8);font-size:.8rem;letter-spacing:.1em;background:rgba(0,0,0,.3);padding:6px 14px;border-radius:100px; }
+
+    /* ── item detail sheet ───────────────────────────────────────────────── */
+    #dv{ position:fixed;inset:0;z-index:115;overflow-y:auto;-webkit-overflow-scrolling:touch;
+      background:radial-gradient(120% 70% at 50% -5%, #F6F4EF 0%, transparent 62%),linear-gradient(180deg,#F6F4EF 0%,#EDEAE3 100%); }
+    #dv[hidden]{ display:none !important; }
+    .dv-top{ position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:12px;
+      padding:calc(12px + env(safe-area-inset-top,0)) 14px 12px;background:rgba(252,251,248,.92);
+      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(46,94,78,.10); }
+    .dv-back{ display:inline-flex;align-items:center;gap:7px;background:transparent;border:1px solid rgba(46,94,78,.18);
+      color:rgba(46,94,78,.75);border-radius:100px;padding:9px 18px 9px 13px;font-family:inherit;font-size:.7rem;
+      font-weight:600;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:all .3s ease; }
+    .dv-back:hover{ border-color:#B8943E;color:#1E3F34; }
+    .dv-top__t{ font-size:.78rem;color:#79837C;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .dv-wrap{ max-width:620px;margin:0 auto;padding:18px 16px calc(46px + env(safe-area-inset-bottom,0)); }
+    .dv-hero{ position:relative;width:100%;height:270px;border-radius:20px;overflow:hidden;background:#DFE6E0;
+      display:flex;align-items:center;justify-content:center;cursor:zoom-in; }
+    .dv-hero img{ width:100%;height:100%;object-fit:cover;display:block; }
+    .dv-hero__n{ position:absolute;right:12px;bottom:12px;background:rgba(15,23,20,.55);color:#fff;
+      font-size:.72rem;letter-spacing:.06em;padding:5px 12px;border-radius:100px; }
+    .dv-thumbs{ display:flex;gap:9px;overflow-x:auto;padding:12px 2px 2px; }
+    .dv-thumb{ width:62px;height:62px;flex:0 0 auto;border-radius:11px;overflow:hidden;cursor:pointer;
+      border:2px solid transparent;transition:border-color .25s ease; }
+    .dv-thumb img{ width:100%;height:100%;object-fit:cover;display:block; }
+    .dv-thumb--on{ border-color:#B8943E; }
+    .dv-head{ display:flex;align-items:flex-start;gap:12px;margin:22px 0 4px; }
+    .dv-title{ font-family:var(--serif,'DM Serif Display',Georgia,serif);font-weight:400;font-size:1.85rem;
+      line-height:1.15;color:#1E3F34;margin:0;letter-spacing:-.01em;flex:1;word-break:break-word; }
+    .dv-sub{ font-size:.82rem;color:#79837C;margin:0 0 20px;letter-spacing:.02em; }
+    .dv-card{ background:#FCFBF8;border:1px solid rgba(46,94,78,.13);border-radius:18px;
+      padding:6px 20px;margin-bottom:14px;box-shadow:0 2px 10px rgba(30,63,52,.04); }
+    .dv-row{ display:flex;gap:14px;align-items:baseline;padding:13px 0;border-bottom:1px solid rgba(46,94,78,.08); }
+    .dv-row:last-child{ border-bottom:none; }
+    .dv-row__k{ flex:0 0 42%;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:#79837C;font-weight:500; }
+    .dv-row__v{ flex:1;font-size:.95rem;color:#1E3F34;word-break:break-word; }
+    .dv-row__v--muted{ color:#A3ABA5; }
+    .dv-label{ font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:#B8943E;
+      font-weight:600;margin:24px 0 10px;padding-left:2px; }
+    .dv-notes{ padding:15px 0;font-size:.92rem;line-height:1.6;color:#1E3F34;white-space:pre-wrap; }
+    /* 90-day timer */
+    .dv-timer{ padding:16px 0 18px; }
+    .dv-timer__head{ display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px; }
+    .dv-timer__label{ font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:#79837C;font-weight:500; }
+    .dv-timer__val{ font-size:.9rem;font-weight:700; }
+    .dv-timer__track{ height:6px;border-radius:100px;background:rgba(46,94,78,.10);overflow:hidden; }
+    .dv-timer__fill{ height:100%;border-radius:100px;transition:width .5s ease; }
+    .dv-timer__foot{ display:flex;justify-content:space-between;margin-top:8px;font-size:.72rem;color:#A3ABA5; }
+    /* action pills */
+    .dv-pills{ display:flex;flex-wrap:wrap;gap:9px;padding:4px 0 16px; }
+    .dv-pill{ background:#FCFBF8;color:rgba(46,94,78,.8);border:1px solid rgba(46,94,78,.18);border-radius:100px;
+      padding:11px 20px;font-size:.86rem;cursor:pointer;font-family:inherit;transition:all .3s ease; }
+    .dv-pill:hover{ border-color:#B8943E;color:#1E3F34; }
+    .dv-pill--on{ background:rgba(184,148,62,.13);border-color:#B8943E;color:#1E3F34;font-weight:600; }
+    .dv-pill[disabled]{ opacity:.5;cursor:default; }
+    .dv-saving{ font-size:.74rem;color:#B8943E;letter-spacing:.1em;text-transform:uppercase;padding:0 0 14px; }
+    .dv-saving[hidden]{ display:none; }
     /* upload sheet */
     #up{ position:fixed;inset:0;z-index:110;background:#F4F7F4;overflow-y:auto; }
     #up[hidden]{ display:none; }
@@ -290,7 +349,21 @@
       <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
       <p style="font-size:1.3rem;font-weight:800;">Registado!</p>
       <button class="send" style="max-width:240px;background:#fff;color:#2E5E4E;" id="up-again">Adicionar outro</button>
+      <!-- without this the overlay covers the sheet's × and there is no way back -->
+      <button class="send" style="max-width:240px;margin-top:10px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.55);font-size:.95rem;" id="up-back">Voltar à lista</button>
     </div>
+  </div>
+
+  <!-- ITEM DETAIL -->
+  <div id="dv" hidden>
+    <div class="dv-top">
+      <button class="dv-back" id="dv-back">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Voltar
+      </button>
+      <span class="dv-top__t" id="dv-top-title"></span>
+    </div>
+    <div class="dv-wrap" id="dv-body"></div>
   </div>
 
   <!-- Android install prompt (appears only when the browser offers it) -->
@@ -359,6 +432,7 @@
   <!-- LIGHTBOX -->
   <div id="lb" class="lb" hidden>
     <button class="cl">&times;</button><button class="pv">&#8249;</button><img id="lb-img" alt=""><button class="nx">&#8250;</button>
+    <span class="lb-count" id="lb-count"></span>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
