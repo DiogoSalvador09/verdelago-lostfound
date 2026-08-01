@@ -138,7 +138,7 @@ $('p').addEventListener('keyup', (e) => { if (e.key === 'Enter') doLogin(); });
 $('logout').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
 
 /* ================= Manager dashboard ================= */
-let ITEMS = [], status = '', signedCache = {};
+let ITEMS = [], status = '', signedCache = {}, view = 'items';
 async function showApp() {
   $('appwrap').hidden = false; $('hk').hidden = true;
   await loadItems();
@@ -178,8 +178,10 @@ function tile(it, idx) {
   a.innerHTML = url
     ? `<img class="item-tile__img" loading="lazy" src="${url}" alt=""><div class="item-tile__overlay"></div>`
     : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+  // a returned or discarded item has no deadline left to count down
+  const open = it.status !== 'returned' && it.status !== 'disposed';
   const top = document.createElement('div'); top.className = 'item-tile__top';
-  top.innerHTML = `<span class="gbadge gbadge--${esc(it.status)}"><span class="gbadge__dot"></span>${SL[it.status] || esc(it.status)}</span>` + (days >= 0 ? `<span class="tchip ${tc}">${left <= 0 ? 'Expirado!' : left + 'd'}</span>` : '');
+  top.innerHTML = `<span class="gbadge gbadge--${esc(it.status)}"><span class="gbadge__dot"></span>${SL[it.status] || esc(it.status)}</span>` + (days >= 0 && open ? `<span class="tchip ${tc}">${left <= 0 ? 'Expirado!' : left + 'd'}</span>` : '');
   const bot = document.createElement('div'); bot.className = 'item-tile__bottom';
   bot.innerHTML = `<div class="item-tile__title"></div><div class="item-tile__meta"></div>`;
   bot.querySelector('.item-tile__title').textContent = it.title || 'Artigo';
@@ -192,8 +194,10 @@ function tile(it, idx) {
 }
 function render() {
   const list = currentList(), g = $('grid');
-  g.textContent = ''; $('empty').hidden = list.length > 0; g.style.display = list.length ? 'grid' : 'none';
+  g.textContent = '';
   const f = document.createDocumentFragment(); list.forEach((it, i) => f.appendChild(tile(it, i))); g.appendChild(f);
+  if (view !== 'items') return;          // another tab owns the header count and what's visible
+  $('empty').hidden = list.length > 0; g.style.display = list.length ? 'grid' : 'none';
   $('count').textContent = `${list.length} ${list.length === 1 ? 'artigo' : 'artigos'}`;
 }
 $('pills').addEventListener('click', (e) => { const p = e.target.closest('.fpill'); if (!p) return; e.preventDefault(); status = p.dataset.status; document.querySelectorAll('#pills .fpill').forEach(x => x.classList.toggle('fpill--active', x === p)); render(); });
@@ -266,14 +270,16 @@ function renderTeam() {
 }
 $('view-seg').addEventListener('click', (e) => {
   const t = e.target.closest('.vtab'); if (!t) return;
-  const v = t.dataset.view;
+  view = t.dataset.view;
   document.querySelectorAll('#view-seg .vtab').forEach(x => x.classList.toggle('vtab--active', x === t));
-  const showItems = v === 'items';
-  $('grid').style.display = showItems ? 'grid' : 'none';
-  $('filters').hidden = !showItems;
-  $('team').hidden = showItems;
+  $('grid').style.display = view === 'items' ? 'grid' : 'none';
+  $('filters').hidden = view !== 'items';
+  $('returns').hidden = view !== 'returns';
+  $('team').hidden = view !== 'team';
   $('empty').hidden = true;
-  if (showItems) render(); else loadStaff();
+  if (view === 'items') render();
+  else if (view === 'returns') renderReturns();
+  else loadStaff();
 });
 
 /* ================= Full-screen layers (detail, upload, lightbox) =================
@@ -308,6 +314,26 @@ const fmtDate = (s) => {
 };
 const SOURCE_L = { app: 'Registado na app', housekeeping: 'Housekeeping', web: 'Dashboard', import: 'Importado' };
 const ST_FLOW = [['found', 'Encontrado'], ['stored', 'Armazenado'], ['returned', 'Devolvido'], ['disposed', 'Descartado']];
+
+/* ---------- The return record ----------
+   Who took the item, when, and against what ID belongs in its own columns
+   (claimed_by / claimed_date / claimed_notes) — but adding columns needs the
+   Supabase service key, which this machine does not hold. So it is stored as
+   one tagged JSON line inside `notes`: machine-readable, never shown raw to
+   staff, and a straight lift into real columns the day they exist. */
+const RT_RE = /^\[devolucao\]\s*(\{.*\})[ \t]*$/m;
+function parseReturn(notes) {
+  const m = (notes || '').match(RT_RE);
+  if (!m) return null;
+  try { return JSON.parse(m[1]); } catch (e) { return null; }
+}
+function stripReturn(notes) {
+  return (notes || '').replace(RT_RE, '').replace(/\n{3,}/g, '\n\n').trim();
+}
+function withReturn(notes, rec) {
+  const base = stripReturn(notes);
+  return (base ? base + '\n\n' : '') + '[devolucao] ' + JSON.stringify(rec);
+}
 
 let DV = null;                 // item currently on screen
 let dvPhotos = [], dvIdx = 0;  // signed urls for its photos
@@ -358,7 +384,8 @@ function renderDetail() {
     ? `<div class="dv-thumbs">${dvPhotos.map((u, i) => `<div class="dv-thumb${i === dvIdx ? ' dv-thumb--on' : ''}" data-i="${i}"><img src="${u}" alt=""></div>`).join('')}</div>`
     : '';
 
-  const notes = [it.description, it.notes].filter(Boolean).join('\n\n');
+  const ret = parseReturn(it.notes);
+  const notes = [it.description, stripReturn(it.notes)].filter(Boolean).join('\n\n');
 
   body.innerHTML = `
     ${hero}${thumbs}
@@ -377,10 +404,9 @@ function renderDetail() {
       ${row('Registado em', fmtDate(it.created_at))}
       ${row('Origem', SOURCE_L[it.source] || it.source)}
       ${row('Quarto', it.linked_room)}
-      ${row('Hóspede', it.linked_name)}
-      ${row('Devolvido a', it.claimed_by)}
-      ${row('Data devolução', fmtDate(it.claimed_date))}
-      ${row('Notas devolução', it.claimed_id_notes)}
+      ${row('Devolvido a', ret && ret.to)}
+      ${row('Data devolução', ret && fmtDate(ret.when))}
+      ${row('Notas devolução', ret && ret.note)}
     </div>
 
     ${notes ? `<div class="dv-label">Notas</div><div class="dv-card"><div class="dv-notes" id="dv-notes"></div></div>` : ''}
@@ -399,15 +425,20 @@ function renderDetail() {
 
     <div class="dv-saving" id="dv-saving" hidden>A guardar…</div>
 
+    ${active ? `<button class="dv-cta" id="dv-return">Devolver ao hóspede</button>` : ''}
+
     <div class="dv-label">Estado</div>
     <div class="dv-pills" id="dv-status">
       ${ST_FLOW.map(([v, l]) => `<button class="dv-pill${it.status === v ? ' dv-pill--on' : ''}" data-st="${v}">${l}</button>`).join('')}
     </div>
 
-    <div class="dv-label">Mover para</div>
-    <div class="dv-pills" id="dv-store">
-      ${STORES.filter(Boolean).map(s => `<button class="dv-pill${it.storage_location === s ? ' dv-pill--on' : ''}" data-loc="${esc(s)}">${esc(s)}</button>`).join('')}
-    </div>`;
+    ${active ? `
+      <div class="dv-label">Mover para</div>
+      <div class="dv-pills" id="dv-store">
+        ${STORES.filter(Boolean).map(s => `<button class="dv-pill${it.storage_location === s ? ' dv-pill--on' : ''}" data-loc="${esc(s)}">${esc(s)}</button>`).join('')}
+      </div>` : ''}
+
+    ${it.status === 'returned' ? `<button class="dv-revert" id="dv-revert">reverter devolução</button>` : ''}`;
 
   $('dv-title').textContent = it.title || 'Artigo';
   $('dv-sub').textContent = [clabel(it.category), fmtDate(it.found_date)].filter(Boolean).join(' · ');
@@ -416,11 +447,99 @@ function renderDetail() {
   const heroEl = $('dv-hero');
   if (heroEl) heroEl.addEventListener('click', () => openLb(dvPhotos, dvIdx));
   body.querySelectorAll('.dv-thumb').forEach(t => t.addEventListener('click', () => { dvIdx = +t.dataset.i; renderDetail(); }));
-  $('dv-status').querySelectorAll('.dv-pill').forEach(b => b.addEventListener('click', () => saveDetail({ status: b.dataset.st })));
-  $('dv-store').querySelectorAll('.dv-pill').forEach(b => b.addEventListener('click', () => {
+
+  $('dv-status').querySelectorAll('.dv-pill').forEach(b => b.addEventListener('click', () => {
+    const st = b.dataset.st;
+    if (st === it.status) return;
+    // "Devolvido" must capture who took it — never a silent status flip
+    if (st === 'returned') { openReturn(it); return; }
+    saveDetail(st === 'found' || st === 'stored' ? { status: st, notes: stripReturn(it.notes) } : { status: st });
+  }));
+
+  const store = $('dv-store');
+  if (store) store.querySelectorAll('.dv-pill').forEach(b => b.addEventListener('click', () => {
     // tapping the current location again clears it
     saveDetail({ storage_location: it.storage_location === b.dataset.loc ? '' : b.dataset.loc });
   }));
+
+  const cta = $('dv-return');
+  if (cta) cta.addEventListener('click', () => openReturn(it));
+  const rev = $('dv-revert');
+  if (rev) rev.addEventListener('click', () => {
+    if (!confirm('Reverter a devolução deste artigo?')) return;
+    saveDetail({ status: 'found', notes: stripReturn(it.notes) });
+  });
+}
+
+/* ---------- return dialog ---------- */
+let rtItem = null;
+function openReturn(it) {
+  rtItem = it;
+  $('rt-item').textContent = it.title || 'Artigo';
+  $('rt-to').value = ''; $('rt-note').value = '';
+  $('rt-go').disabled = false; $('rt-go').textContent = 'Confirmar devolução';
+  $('rt').hidden = false;
+  pushLayer(() => { $('rt').hidden = true; rtItem = null; });
+  setTimeout(() => $('rt-to').focus(), 60);
+}
+$('rt-cancel').addEventListener('click', closeLayer);
+$('rt-back').addEventListener('click', closeLayer);
+$('rt-note').addEventListener('keyup', (e) => { if (e.key === 'Enter') $('rt-go').click(); });
+$('rt-go').addEventListener('click', async () => {
+  const it = rtItem; if (!it) return;
+  const rec = { to: $('rt-to').value.trim(), note: $('rt-note').value.trim(), when: new Date().toISOString() };
+  $('rt-go').disabled = true; $('rt-go').textContent = 'A guardar…';
+  const patch = { status: 'returned', notes: withReturn(it.notes, rec) };
+  const { error } = await sb.from('items').update(patch).eq('id', it.id);
+  if (error) {
+    $('rt-go').disabled = false; $('rt-go').textContent = 'Confirmar devolução';
+    alert('Não foi possível guardar: ' + (error.message || error)); return;
+  }
+  Object.assign(it, patch);
+  closeLayer();                                   // back to the item, now marked returned
+  if (DV === it) renderDetail();
+  updateCounts(); render(); renderReturns();
+});
+
+/* ---------- Devoluções tab: the return log ---------- */
+function renderReturns() {
+  const box = $('returns');
+  const list = ITEMS.filter(i => i.status === 'returned')
+    .map(i => ({ i, r: parseReturn(i.notes) }))
+    .sort((a, b) => new Date(b.r && b.r.when || b.i.updated_at || 0) - new Date(a.r && a.r.when || a.i.updated_at || 0));
+
+  if (view === 'returns') $('count').textContent = `${list.length} ${list.length === 1 ? 'devolução' : 'devoluções'}`;
+
+  if (!list.length) {
+    box.innerHTML = `<div class="empty-state" style="padding:60px 20px;">
+      <div class="empty-state__title">Ainda não há devoluções</div>
+      <div style="font-size:.85rem;color:#79837C;margin-top:8px;">Abra um artigo e toque em <b>Devolver ao hóspede</b> para registar a entrega.</div>
+    </div>`;
+    return;
+  }
+
+  box.innerHTML = list.map(({ i, r }) => {
+    const u = i.photos && i.photos.length ? signedCache[i.photos[0]] : null;
+    return `<div class="rlog" data-id="${i.id}">
+      ${u ? `<img class="rlog__img" loading="lazy" src="${u}" alt="">` : `<div class="rlog__ph">◻</div>`}
+      <div class="rlog__b">
+        <div class="rlog__t"></div>
+        <div class="rlog__to"></div>
+        <div class="rlog__note"></div>
+        <div class="rlog__d">${fmtDate(r && r.when) || fmtDate(i.updated_at) || '—'}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // guest names via textContent — never innerHTML
+  box.querySelectorAll('.rlog').forEach((el, n) => {
+    const { i, r } = list[n];
+    el.querySelector('.rlog__t').textContent = i.title || 'Artigo';
+    el.querySelector('.rlog__to').textContent = r && r.to ? 'Devolvido a ' + r.to : 'Devolvido';
+    const note = el.querySelector('.rlog__note');
+    if (r && r.note) note.textContent = r.note; else note.remove();
+    el.addEventListener('click', () => openDetail(i));
+  });
 }
 
 async function saveDetail(patch) {

@@ -95,6 +95,48 @@
     .dv-pill[disabled]{ opacity:.5;cursor:default; }
     .dv-saving{ font-size:.74rem;color:#B8943E;letter-spacing:.1em;text-transform:uppercase;padding:0 0 14px; }
     .dv-saving[hidden]{ display:none; }
+    .dv-cta{ width:100%;margin:8px 0 4px;background:#2E5E4E;color:#fff;border:none;border-radius:16px;
+      padding:17px;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em; }
+    .dv-cta:hover{ background:#1E3F34; }
+    .dv-revert{ display:block;margin:18px auto 0;background:none;border:none;color:#A3ABA5;font-size:.74rem;
+      cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px; }
+    .dv-revert:hover{ color:#79837C; }
+
+    /* ── return dialog ───────────────────────────────────────────────────── */
+    #rt{ position:fixed;inset:0;z-index:118;display:flex;align-items:flex-end;justify-content:center; }
+    #rt[hidden]{ display:none !important; }
+    .rt-back{ position:absolute;inset:0;background:rgba(15,23,20,.55); }
+    .rt-panel{ position:relative;z-index:1;width:100%;max-width:520px;background:#FCFBF8;
+      border-radius:24px 24px 0 0;padding:26px 22px calc(26px + env(safe-area-inset-bottom,0));
+      max-height:88vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(30,63,52,.22);animation:rtUp .32s cubic-bezier(.22,.61,.36,1); }
+    @keyframes rtUp{ from{ transform:translateY(40px);opacity:0; } to{ transform:none;opacity:1; } }
+    .rt-handle{ width:40px;height:4px;border-radius:100px;background:rgba(46,94,78,.18);margin:-8px auto 18px; }
+    .rt-title{ font-family:var(--serif,'DM Serif Display',Georgia,serif);font-size:1.55rem;color:#1E3F34;margin:0 0 4px; }
+    .rt-item{ font-size:.84rem;color:#79837C;margin-bottom:20px; }
+    #rt label{ display:block;font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:#79837C;
+      font-weight:500;margin:16px 0 7px; }
+    #rt input[type=text]{ width:100%;box-sizing:border-box;background:#fff !important;border:1.5px solid rgba(46,94,78,.18) !important;
+      border-radius:14px !important;padding:14px 16px !important;font-size:1.02rem;font-family:inherit;color:#1E3F34 !important; }
+    #rt input[type=text]:focus{ border-color:#B8943E !important;outline:none; }
+    .rt-go{ width:100%;margin-top:24px;background:#2E5E4E;color:#fff;border:none;border-radius:16px;
+      padding:17px;font-size:1.05rem;font-weight:700;cursor:pointer;font-family:inherit; }
+    .rt-go[disabled]{ opacity:.6;cursor:default; }
+    .rt-cancel{ width:100%;margin-top:10px;background:none;border:none;color:#79837C;font-size:.88rem;
+      cursor:pointer;font-family:inherit;padding:12px; }
+
+    /* ── returns log (Devoluções tab) ────────────────────────────────────── */
+    .rlog{ display:flex;gap:15px;align-items:center;background:#FCFBF8;border:1px solid rgba(46,94,78,.13);
+      border-radius:16px;padding:14px;margin-bottom:12px;cursor:pointer;box-shadow:0 2px 10px rgba(30,63,52,.04);
+      transition:border-color .25s ease; }
+    .rlog:hover{ border-color:#B8943E; }
+    .rlog__img{ width:66px;height:66px;flex:0 0 auto;border-radius:12px;object-fit:cover;background:#E4EBE5; }
+    .rlog__ph{ width:66px;height:66px;flex:0 0 auto;border-radius:12px;background:rgba(46,94,78,.07);
+      display:flex;align-items:center;justify-content:center;color:rgba(46,94,78,.25);font-size:1.4rem; }
+    .rlog__b{ flex:1;min-width:0; }
+    .rlog__t{ font-size:1rem;font-weight:600;color:#1E3F34;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .rlog__to{ font-size:.86rem;color:#2E5E4E;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .rlog__d{ font-size:.74rem;color:#A3ABA5;margin-top:4px; }
+    .rlog__note{ font-size:.76rem;color:#79837C;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
     /* upload sheet */
     #up{ position:fixed;inset:0;z-index:110;background:#F4F7F4;overflow-y:auto; }
     #up[hidden]{ display:none; }
@@ -294,6 +336,7 @@
         </div>
         <div class="view-seg" id="view-seg">
           <button class="vtab vtab--active" data-view="items">Artigos</button>
+          <button class="vtab" data-view="returns">Devoluções</button>
           <button class="vtab" data-view="team">Equipa</button>
         </div>
         <form id="filters" onsubmit="return false;">
@@ -314,6 +357,7 @@
         </form>
         <div id="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px;"></div>
         <div id="empty" class="empty-state" style="padding:60px 20px;" hidden><div class="empty-state__title">Sem artigos</div></div>
+        <div id="returns" hidden></div>
         <div id="team" hidden></div>
       </div>
     </main>
@@ -426,6 +470,22 @@
         <p style="margin:0;opacity:.85;">O artigo foi registado.</p>
         <button class="send" style="max-width:240px;background:#fff;color:#2E5E4E;" id="hk-again">Adicionar outro</button>
       </div>
+    </div>
+  </div>
+
+  <!-- RETURN DIALOG -->
+  <div id="rt" hidden>
+    <div class="rt-back" id="rt-back"></div>
+    <div class="rt-panel">
+      <div class="rt-handle"></div>
+      <div class="rt-title">Devolver artigo</div>
+      <div class="rt-item" id="rt-item"></div>
+      <label>Devolvido a</label>
+      <input type="text" id="rt-to" placeholder="Nome do hóspede" autocomplete="off">
+      <label>Notas — quarto, documento…</label>
+      <input type="text" id="rt-note" placeholder="opcional" autocomplete="off">
+      <button class="rt-go" id="rt-go">Confirmar devolução</button>
+      <button class="rt-cancel" id="rt-cancel">Cancelar</button>
     </div>
   </div>
 
