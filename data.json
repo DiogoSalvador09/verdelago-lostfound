@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-31T23:39:29.546Z",
+  "updated": "2026-08-01T01:05:49.059Z",
   "count": 75,
   "items": [
     {
@@ -989,7 +989,7 @@
       "disposed": 7,
       "returnRate": 30,
       "registeredToday": 0,
-      "registeredThisMonth": 43,
+      "registeredThisMonth": 0,
       "returnedThisMonth": 0,
       "avgDaysToReturn": 1,
       "expiringSoon": 0,
