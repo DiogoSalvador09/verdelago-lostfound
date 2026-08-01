@@ -661,10 +661,15 @@ $('hk-form').addEventListener('submit', async (e) => {
 });
 $('hk-again').addEventListener('click', () => { $('hk-done').hidden = true; });
 
-/* ================= Install prompt (Android) ================= */
+/* ================= Install prompt (phones/tablets only) ================= */
+// Desktop Chrome also fires beforeinstallprompt, so reception was being told to
+// "instalar a aplicação no telemóvel" while sitting at the front-desk PC.
+const isHandheld = () => window.matchMedia('(pointer: coarse)').matches &&
+                         Math.min(screen.width, screen.height) <= 900;
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault(); deferredPrompt = e;
+  if (!isHandheld()) return;
   const bar = $('install-bar'); if (bar) bar.hidden = false;
 });
 window.addEventListener('appinstalled', () => { const b = $('install-bar'); if (b) b.hidden = true; deferredPrompt = null; });
