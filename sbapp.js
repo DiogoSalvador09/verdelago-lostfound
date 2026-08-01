@@ -149,7 +149,7 @@ async function loadItems() {
   ITEMS = data || [];
   const firsts = ITEMS.filter(i => i.photos && i.photos.length).map(i => i.photos[0]);
   if (firsts.length) { const { data: s } = await sb.storage.from('items').createSignedUrls(firsts, 3600); (s || []).forEach(x => { if (x.signedUrl) signedCache[x.path] = x.signedUrl; }); }
-  buildCats(); updateCounts(); render();
+  buildCats(); updateCounts(); renderList();
 }
 function buildCats() {
   const sel = $('catf'); sel.length = 1;
@@ -160,14 +160,18 @@ function buildCats() {
 const onShelf = (it) => it.status !== 'returned';
 function updateCounts() {
   const live = ITEMS.filter(onShelf);
-  const s = { all: live.length, found: live.filter(i => i.status === 'found').length, stored: live.filter(i => i.status === 'stored').length };
+  const s = { all: live.length, found: live.filter(i => i.status === 'found').length,
+    stored: live.filter(i => i.status === 'stored').length,
+    returned: ITEMS.filter(i => i.status === 'returned').length };
   document.querySelectorAll('#pills .fpill__n').forEach(n => n.textContent = s[n.dataset.c]);
 }
 function currentList() {
   const q = $('q').value.trim().toLowerCase(), cat = $('catf').value;
   return ITEMS.filter(it => {
-    if (!onShelf(it)) return false;
-    if (status && it.status !== status) return false;
+    // an explicit pill means exactly that status; "Todos" means everything still
+    // on the shelf, i.e. not already handed back
+    if (status) { if (it.status !== status) return false; }
+    else if (!onShelf(it)) return false;
     if (cat && it.category !== cat) return false;
     if (!q) return true;
     return [it.title, it.description, it.found_location, it.found_by, clabel(it.category)].join(' ').toLowerCase().includes(q);
@@ -204,9 +208,25 @@ function render() {
   $('empty').hidden = list.length > 0; g.style.display = list.length ? 'grid' : 'none';
   $('count').textContent = `${list.length} ${list.length === 1 ? 'artigo' : 'artigos'}`;
 }
-$('pills').addEventListener('click', (e) => { const p = e.target.closest('.fpill'); if (!p) return; e.preventDefault(); status = p.dataset.status; document.querySelectorAll('#pills .fpill').forEach(x => x.classList.toggle('fpill--active', x === p)); render(); });
-$('q').addEventListener('input', render);
-$('catf').addEventListener('change', render);
+// "Devolvidos" is a filter like the others, but it shows the return log (who
+// took it, when) instead of plain tiles — that is the whole point of looking
+// at returns.
+function renderList() {
+  if (view !== 'items') return;
+  const isRet = status === 'returned';
+  $('returns').hidden = !isRet;
+  if (!isRet) { render(); return; }
+  $('grid').style.display = 'none'; $('grid').textContent = ''; $('empty').hidden = true;
+  renderReturns();
+}
+$('pills').addEventListener('click', (e) => {
+  const p = e.target.closest('.fpill'); if (!p) return; e.preventDefault();
+  status = p.dataset.status;
+  document.querySelectorAll('#pills .fpill').forEach(x => x.classList.toggle('fpill--active', x === p));
+  renderList();
+});
+$('q').addEventListener('input', renderList);
+$('catf').addEventListener('change', renderList);
 
 /* ---------- Equipa: who is using the app, and what each of them registered ---------- */
 let STAFF = [];
@@ -276,14 +296,11 @@ $('view-seg').addEventListener('click', (e) => {
   const t = e.target.closest('.vtab'); if (!t) return;
   view = t.dataset.view;
   document.querySelectorAll('#view-seg .vtab').forEach(x => x.classList.toggle('vtab--active', x === t));
-  $('grid').style.display = view === 'items' ? 'grid' : 'none';
   $('filters').hidden = view !== 'items';
-  $('returns').hidden = view !== 'returns';
   $('team').hidden = view !== 'team';
   $('empty').hidden = true;
-  if (view === 'items') render();
-  else if (view === 'returns') renderReturns();
-  else loadStaff();
+  if (view === 'items') { renderList(); }
+  else { $('grid').style.display = 'none'; $('returns').hidden = true; loadStaff(); }
 });
 
 /* ================= Full-screen layers (detail, upload, lightbox) =================
@@ -506,17 +523,18 @@ $('rt-go').addEventListener('click', async () => {
   Object.assign(it, patch);
   closeLayer();                                   // back to the item, now marked returned
   if (DV === it) renderDetail();
-  updateCounts(); render(); renderReturns();
+  updateCounts(); renderList();
 });
 
 /* ---------- Devoluções tab: the return log ---------- */
 function renderReturns() {
   const box = $('returns');
-  const list = ITEMS.filter(i => i.status === 'returned')
+  // currentList() so the search box and category filter work here too
+  const list = currentList().filter(i => i.status === 'returned')
     .map(i => ({ i, r: parseReturn(i.notes) }))
     .sort((a, b) => new Date(b.r && b.r.when || b.i.updated_at || 0) - new Date(a.r && a.r.when || a.i.updated_at || 0));
 
-  if (view === 'returns') $('count').textContent = `${list.length} ${list.length === 1 ? 'devolução' : 'devoluções'}`;
+  $('count').textContent = `${list.length} ${list.length === 1 ? 'devolução' : 'devoluções'}`;
 
   if (!list.length) {
     box.innerHTML = `<div class="empty-state" style="padding:60px 20px;">
@@ -557,7 +575,7 @@ async function saveDetail(patch) {
   if (box) box.hidden = true;
   if (error) { alert('Não foi possível guardar: ' + (error.message || error)); return; }
   Object.assign(it, patch);                       // ITEMS holds the same object reference
-  renderDetail(); updateCounts(); render();
+  renderDetail(); updateCounts(); renderList();
 }
 
 /* ================= Lightbox ================= */
@@ -691,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= Build stamp + self-update ================= */
 // Shown in the navbar so anyone can say which build they are actually running —
 // "it must be cached" is a guess until someone can read the number off screen.
-const BUILD = 'v10';
+const BUILD = 'v11';
 const stamp = $('build'); if (stamp) stamp.textContent = BUILD;
 
 if ('serviceWorker' in navigator) {

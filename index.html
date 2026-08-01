@@ -17,12 +17,12 @@
        so without a changing URL a deploy can stay invisible on staff phones for
        10+ minutes (or until the service worker re-caches the stale copy).
        BUMP THIS TOGETHER WITH `CACHE` IN sw.js ON EVERY RELEASE. -->
-  <link rel="stylesheet" href="./style.css?v=10">
+  <link rel="stylesheet" href="./style.css?v=11">
   <!-- dark-luxe theme; must load AFTER style.css to override the light defaults -->
-  <link rel="stylesheet" href="./luxe.css?v=10">
+  <link rel="stylesheet" href="./luxe.css?v=11">
   <style>
     /* login */
-    #login{ position:fixed; inset:0; background:#2E5E4E; color:#fff; display:flex; align-items:center; justify-content:center; padding:26px; z-index:100; }
+    #login{ position:fixed; inset:0; background:#2E5E4E; color:#fff; display:flex; align-items:center; justify-content:center; padding:26px; z-index:1500; }
     #login .card{ width:100%; max-width:360px; text-align:center; }
     #login img{ height:40px; margin-bottom:10px; }
     #login h1{ font-size:1.05rem; letter-spacing:.22em; text-transform:uppercase; font-weight:600; margin:0 0 26px; opacity:.9; }
@@ -36,7 +36,7 @@
     #appwrap[hidden]{ display:none !important; }
     .item-tile{ cursor:pointer; }
     /* lightbox */
-    .lb{ position:fixed;inset:0;z-index:120;background:rgba(15,23,20,.93);display:flex;align-items:center;justify-content:center; }
+    .lb{ position:fixed;inset:0;z-index:1200;background:rgba(15,23,20,.93);display:flex;align-items:center;justify-content:center; }
     .lb[hidden]{ display:none; }
     .lb img{ max-width:92vw;max-height:80vh;border-radius:10px; position:relative;z-index:1; }
     .lb button{ position:absolute;z-index:2;background:rgba(255,255,255,.15);color:#fff;border:none;cursor:pointer;border-radius:50%;width:50px;height:50px;font-size:1.7rem;font-family:inherit; }
@@ -47,7 +47,7 @@
       color:rgba(255,255,255,.8);font-size:.8rem;letter-spacing:.1em;background:rgba(0,0,0,.3);padding:6px 14px;border-radius:100px; }
 
     /* ── item detail sheet ───────────────────────────────────────────────── */
-    #dv{ position:fixed;inset:0;z-index:115;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    #dv{ position:fixed;inset:0;z-index:1150;overflow-y:auto;-webkit-overflow-scrolling:touch;
       background:radial-gradient(120% 70% at 50% -5%, #F6F4EF 0%, transparent 62%),linear-gradient(180deg,#F6F4EF 0%,#EDEAE3 100%); }
     #dv[hidden]{ display:none !important; }
     .dv-top{ position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:12px;
@@ -112,7 +112,7 @@
     .dv-revert:hover{ color:#79837C; }
 
     /* ── return dialog ───────────────────────────────────────────────────── */
-    #rt{ position:fixed;inset:0;z-index:118;display:flex;align-items:flex-end;justify-content:center; }
+    #rt{ position:fixed;inset:0;z-index:1180;display:flex;align-items:flex-end;justify-content:center; }
     #rt[hidden]{ display:none !important; }
     .rt-back{ position:absolute;inset:0;background:rgba(15,23,20,.55); }
     .rt-panel{ position:relative;z-index:1;width:100%;max-width:520px;background:#FCFBF8;
@@ -147,7 +147,7 @@
     .rlog__d{ font-size:.74rem;color:#A3ABA5;margin-top:4px; }
     .rlog__note{ font-size:.76rem;color:#79837C;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
     /* upload sheet */
-    #up{ position:fixed;inset:0;z-index:110;background:#F4F7F4;overflow-y:auto; }
+    #up{ position:fixed;inset:0;z-index:1100;background:#F4F7F4;overflow-y:auto; }
     #up[hidden]{ display:none; }
     #up .top{ background:#2E5E4E;color:#fff;padding:16px 18px calc(16px + env(safe-area-inset-top,0)) ;display:flex;align-items:center;gap:12px; }
     #up .top b{ font-size:1.05rem; }
@@ -171,7 +171,7 @@
        Deep atmospheric ground, a slow gold aurora, hairline rules and a serif
        headline. No boxes — the input is a single lit underline.            */
     #hk-onboard{
-      position:fixed; inset:0; z-index:130; padding:32px;
+      position:fixed; inset:0; z-index:1300; padding:32px;
       display:flex; align-items:center; justify-content:center; text-align:center;
       color:#1E3F34; overflow:hidden;
       background:
@@ -283,7 +283,7 @@
     .pitem__d{ font-size:.7rem; color:#79837C; margin-top:2px; }
     /* install banner */
     #install-bar{
-      position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom,0)); z-index:140;
+      position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom,0)); z-index:1400;
       background:#FCFBF8; border:1px solid rgba(46,94,78,.18); border-radius:16px;
       box-shadow:0 8px 30px rgba(30,63,52,.14); padding:14px 16px;
       display:flex; align-items:center; gap:12px; flex-wrap:wrap;
@@ -349,7 +349,6 @@
         </div>
         <div class="view-seg" id="view-seg">
           <button class="vtab vtab--active" data-view="items">Artigos</button>
-          <button class="vtab" data-view="returns">Devoluções</button>
           <button class="vtab" data-view="team">Equipa</button>
         </div>
         <form id="filters" onsubmit="return false;">
@@ -358,6 +357,7 @@
               <a href="#" class="fpill fpill--active" data-status="">Todos <span class="fpill__n" data-c="all"></span></a>
               <a href="#" class="fpill" data-status="found">Encontrados <span class="fpill__n" data-c="found"></span></a>
               <a href="#" class="fpill" data-status="stored">Armazenados <span class="fpill__n" data-c="stored"></span></a>
+              <a href="#" class="fpill" data-status="returned">Devolvidos <span class="fpill__n" data-c="returned"></span></a>
             </div>
             <div class="filter-bar__search">
               <div class="search-field">
@@ -509,7 +509,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js?v=10"></script>
-  <script src="./sbapp.js?v=10" defer></script>
+  <script src="./config.js?v=11"></script>
+  <script src="./sbapp.js?v=11" defer></script>
 </body>
 </html>
