@@ -17,9 +17,9 @@
        so without a changing URL a deploy can stay invisible on staff phones for
        10+ minutes (or until the service worker re-caches the stale copy).
        BUMP THIS TOGETHER WITH `CACHE` IN sw.js ON EVERY RELEASE. -->
-  <link rel="stylesheet" href="./style.css?v=11">
+  <link rel="stylesheet" href="./style.css?v=12">
   <!-- dark-luxe theme; must load AFTER style.css to override the light defaults -->
-  <link rel="stylesheet" href="./luxe.css?v=11">
+  <link rel="stylesheet" href="./luxe.css?v=12">
   <style>
     /* login */
     #login{ position:fixed; inset:0; background:#2E5E4E; color:#fff; display:flex; align-items:center; justify-content:center; padding:26px; z-index:1500; }
@@ -307,7 +307,40 @@
     .hk-wrap{ max-width:560px;margin:0 auto;padding:18px 16px 60px; }
     #hk label{ display:block;font-size:.82rem;font-weight:600;color:#4a5a50;margin:18px 0 6px; }
     #hk input[type=text]{ width:100%;box-sizing:border-box;border:1.5px solid #DDE6E0;border-radius:14px;padding:15px 16px;font-size:1.05rem;background:#fff;font-family:inherit; }
-  </style>
+
+    /* ── Phone fit ────────────────────────────────────────────────────────────
+       "out of proportion… I can scroll with my finger, it's not sitting like an
+       app." Two separate causes:
+       1) style.css gives .filter-bar__pills `flex-shrink:0`. Once a 4th pill
+          (Devolvidos) was added the row became wider than the screen and, since
+          it cannot shrink, it pushed the whole DOCUMENT sideways — that is the
+          sideways finger-scroll.
+       2) .item-tile is aspect-ratio 3/4 and the grid asked for minmax(185px,1fr),
+          which leaves room for exactly ONE column on a phone — so every item
+          rendered as a ~330x440 slab.
+       Plus the notch/home-indicator padding a standalone PWA with
+       viewport-fit=cover does not get for free. */
+    html, body{ overflow-x:hidden; overscroll-behavior:none; -webkit-text-size-adjust:100%; }
+    .filter-bar{ max-width:100%; }
+    .filter-bar__pills{ flex-shrink:1 !important; min-width:0; max-width:100%; }
+    /* keep the fixed navbar clear of the status bar, and push content down to match */
+    .navbar{ height:calc(var(--nav-height) + env(safe-area-inset-top,0px)) !important;
+             padding-top:env(safe-area-inset-top,0px) !important; }
+    .page-content{ padding-top:calc(var(--nav-height) + env(safe-area-inset-top,0px) + var(--space-8)) !important; }
+
+    @media (max-width:640px){
+      /* two tiles across reads as an app; one giant tile per row does not.
+         !important because the grid carries an inline style attribute. */
+      #grid{ grid-template-columns:repeat(auto-fill,minmax(140px,1fr)) !important; gap:10px !important; }
+      #grid, #returns, #team{ padding-bottom:calc(12px + env(safe-area-inset-bottom,0px)); }
+      .item-tile__title{ font-size:.92rem; }
+      .item-tile__meta{ font-size:.72rem; }
+      /* these rows scroll inside themselves rather than widening the page */
+      .view-seg{ overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px; }
+      .vtab{ flex:0 0 auto; }
+      .filter-bar__search{ min-width:0 !important; }
+    }
+</style>
 </head>
 <body>
   <!-- LOGIN -->
@@ -509,7 +542,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js?v=11"></script>
-  <script src="./sbapp.js?v=11" defer></script>
+  <script src="./config.js?v=12"></script>
+  <script src="./sbapp.js?v=12" defer></script>
 </body>
 </html>
