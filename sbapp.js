@@ -688,12 +688,51 @@ $('hk-again').addEventListener('click', () => { $('hk-done').hidden = true; });
 // "instalar a aplicação no telemóvel" while sitting at the front-desk PC.
 const isHandheld = () => window.matchMedia('(pointer: coarse)').matches &&
                          Math.min(screen.width, screen.height) <= 900;
+// Already installed? Then never nag. iOS reports it on navigator.standalone,
+// everyone else through the display-mode media query.
+const isInstalled = () => window.matchMedia('(display-mode: standalone)').matches ||
+                          window.navigator.standalone === true;
+// iPadOS 13+ deliberately reports itself as "Macintosh", so the touch-point
+// count is the only reliable way to tell an iPad from a real Mac.
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                    (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+
+// "Agora não" used to hide the bar for that page view only, so it came back on
+// every single open. Snooze it properly.
+const SNOOZE_KEY = 'install_snooze_until';
+function installSnoozed() {
+  try { return Date.now() < parseInt(localStorage.getItem(SNOOZE_KEY) || '0', 10); } catch (e) { return false; }
+}
+function snoozeInstall(days) {
+  try { localStorage.setItem(SNOOZE_KEY, String(Date.now() + days * 864e5)); } catch (e) {}
+}
+
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault(); deferredPrompt = e;
-  if (!isHandheld()) return;
+  if (!isHandheld() || isInstalled() || installSnoozed()) return;
   const bar = $('install-bar'); if (bar) bar.hidden = false;
 });
+
+/* Safari has never supported beforeinstallprompt — on iPhone/iPad that event
+   NEVER fires, so the install bar could not appear at all and staff had no way
+   to know the app was installable. On iOS the only route is Share → "Adicionar
+   ao Ecrã Principal", done by hand, so show that instruction instead of a
+   button that cannot do anything. */
+function maybeShowIOSInstall() {
+  if (!isIOS() || isInstalled() || installSnoozed()) return;
+  const bar = $('install-bar'), txt = $('install-txt'), go = $('install-go');
+  if (!bar || !txt) return;
+  txt.innerHTML = 'Para instalar: toque em ' +
+    '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin:0 1px">' +
+    '<path d="M12 16V4"/><polyline points="8 8 12 4 16 8"/>' +
+    '<path d="M20 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5"/></svg>' +
+    ' em baixo e depois <b>Adicionar ao Ecrã Principal</b>';
+  if (go) go.hidden = true;            // nothing for it to trigger on iOS
+  $('install-no').textContent = 'Entendido';
+  bar.hidden = false;
+}
 window.addEventListener('appinstalled', () => { const b = $('install-bar'); if (b) b.hidden = true; deferredPrompt = null; });
 document.addEventListener('DOMContentLoaded', () => {
   const btn = $('install-go');
@@ -704,12 +743,19 @@ document.addEventListener('DOMContentLoaded', () => {
     deferredPrompt = null; $('install-bar').hidden = true;
   });
   const dismiss = $('install-no');
-  if (dismiss) dismiss.addEventListener('click', () => { $('install-bar').hidden = true; });
+  if (dismiss) dismiss.addEventListener('click', () => {
+    $('install-bar').hidden = true;
+    snoozeInstall(14);                 // don't ask again for a fortnight
+  });
+  // iOS gets no event to hang this off, so it is offered directly. The login
+  // screen sits above the bar (z-index 1500 vs 1400), so this stays out of the
+  // way until someone is actually signed in.
+  maybeShowIOSInstall();
 });
 /* ================= Build stamp + self-update ================= */
 // Shown in the navbar so anyone can say which build they are actually running —
 // "it must be cached" is a guess until someone can read the number off screen.
-const BUILD = 'v12';
+const BUILD = 'v13';
 const stamp = $('build'); if (stamp) stamp.textContent = BUILD;
 
 if ('serviceWorker' in navigator) {
