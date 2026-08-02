@@ -4,7 +4,17 @@
      · manager      -> full dashboard (list, search, +Novo)
      · housekeeping -> upload-only: first-run name, then just photo + send */
 
-const sb = supabase.createClient(CONFIG.url, CONFIG.anon);
+// Auth options are spelled out rather than left to defaults so a future
+// supabase-js default cannot quietly start logging staff out.
+//   persistSession/autoRefreshToken: keep them signed in across app launches.
+//   detectSessionInUrl:false        : we own the URL hash (the QR poster uses
+//                                     #k=hk); nothing here ever arrives as an
+//                                     OAuth/magic-link callback.
+// NB storageKey is deliberately NOT set. Changing it would orphan every session
+// already stored on every phone and sign the whole team out once.
+const sb = supabase.createClient(CONFIG.url, CONFIG.anon, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+});
 const HK_NAMES = (typeof CONFIG !== 'undefined' && Array.isArray(CONFIG.hkNames)) ? CONFIG.hkNames : [];
 
 const SL = { found:'Encontrado', stored:'Armazenado', returned:'Devolvido', disposed:'Descartado' };
@@ -755,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= Build stamp + self-update ================= */
 // Shown in the navbar so anyone can say which build they are actually running —
 // "it must be cached" is a guess until someone can read the number off screen.
-const BUILD = 'v13';
+const BUILD = 'v14';
 const stamp = $('build'); if (stamp) stamp.textContent = BUILD;
 
 if ('serviceWorker' in navigator) {
@@ -797,10 +807,40 @@ async function tryQrLogin() {
   return data.session;
 }
 
+/* Keeping people signed in, especially on iOS.
+   An installed PWA is suspended, not closed: when iOS resumes it, the timer
+   supabase-js uses to refresh the access token may simply not have fired while
+   the app was frozen, so the first request after resume can go out with a dead
+   token and look like a logout. Re-checking the session whenever the app comes
+   back to the foreground forces a refresh at exactly that moment. */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    sb.auth.getSession().catch(() => {});
+  }
+});
+
+// Only a real sign-out should ever bounce someone to the login screen. A failed
+// token refresh must not: it is usually just the resort wifi dropping.
+sb.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT') showLogin();
+});
+
 (async () => {
-  const { data } = await sb.auth.getSession();
-  if (data && data.session) {
-    const still = await enforceYear(data.session);
+  // A network wobble at launch must not look like "you are logged out": read the
+  // stored session, and if that throws, try once more before giving up.
+  let session = null;
+  for (const attempt of [1, 2]) {
+    try {
+      const { data } = await sb.auth.getSession();
+      session = (data && data.session) || null;
+      break;
+    } catch (e) {
+      if (attempt === 2) break;
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }
+  if (session) {
+    const still = await enforceYear(session);
     if (still) { route(still); return; }
     showLogin('Passou um ano desde a última entrada. Introduza a palavra-passe novamente.');
     return;
