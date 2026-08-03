@@ -765,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= Build stamp + self-update ================= */
 // Shown in the navbar so anyone can say which build they are actually running —
 // "it must be cached" is a guess until someone can read the number off screen.
-const BUILD = 'v14';
+const BUILD = 'v15';
 const stamp = $('build'); if (stamp) stamp.textContent = BUILD;
 
 if ('serviceWorker' in navigator) {

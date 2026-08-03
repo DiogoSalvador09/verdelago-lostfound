@@ -17,9 +17,9 @@
        so without a changing URL a deploy can stay invisible on staff phones for
        10+ minutes (or until the service worker re-caches the stale copy).
        BUMP THIS TOGETHER WITH `CACHE` IN sw.js ON EVERY RELEASE. -->
-  <link rel="stylesheet" href="./style.css?v=14">
+  <link rel="stylesheet" href="./style.css?v=15">
   <!-- dark-luxe theme; must load AFTER style.css to override the light defaults -->
-  <link rel="stylesheet" href="./luxe.css?v=14">
+  <link rel="stylesheet" href="./luxe.css?v=15">
   <style>
     /* login */
     #login{ position:fixed; inset:0; background:#2E5E4E; color:#fff; display:flex; align-items:center; justify-content:center; padding:26px; z-index:1500; }
@@ -320,7 +320,12 @@
           rendered as a ~330x440 slab.
        Plus the notch/home-indicator padding a standalone PWA with
        viewport-fit=cover does not get for free. */
-    html, body{ overflow-x:hidden; overscroll-behavior:none; -webkit-text-size-adjust:100%; }
+    /* NO overflow-x:hidden / overscroll-behavior on html+body. Setting them
+       there is a classic way to kill touch scrolling on iOS — it did exactly
+       that in v12 and the app became unscrollable on Diogo's phone. They were
+       only ever a backstop anyway: the real sideways-scroll cause was the
+       filter pills being unable to shrink, fixed just below. */
+    html, body{ -webkit-text-size-adjust:100%; }
     .filter-bar{ max-width:100%; }
     .filter-bar__pills{ flex-shrink:1 !important; min-width:0; max-width:100%; }
     /* keep the fixed navbar clear of the status bar, and push content down to match */
@@ -542,7 +547,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js?v=14"></script>
-  <script src="./sbapp.js?v=14" defer></script>
+  <script src="./config.js?v=15"></script>
+  <script src="./sbapp.js?v=15" defer></script>
 </body>
 </html>
