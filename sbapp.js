@@ -46,6 +46,23 @@ const refQuery = (q) => {
   return /^\d+$/.test(n) ? String(parseInt(n, 10)) : null;
 };
 
+/* ---------- Status follows the storage location ----------
+   "Armazenado" and "está guardado em X" are the same fact stated twice, and
+   staff were only ever setting the second one — so 46 items sat on the
+   dashboard as "Encontrado" while being visibly filed in the Cofres. Nobody is
+   going to remember to tick a status pill as well, so the status is derived:
+   give an item a storage location and it is stored; take it away and it is back
+   to merely found.
+
+   Returned and discarded items are exempt. Those are end states, and where the
+   thing happens to be sitting no longer says anything about them.
+   Returns the status to apply, or null when it is already right. */
+function statusForStorage(it, loc) {
+  if (it.status === 'returned' || it.status === 'disposed') return null;
+  const want = (loc || '').trim() ? 'stored' : 'found';
+  return want === it.status ? null : want;
+}
+
 function guessCat(t) {
   t = (t || '').toLowerCase();
   const m = [
@@ -102,7 +119,9 @@ async function recordStaff(name) {
 // Shared insert+upload used by BOTH the manager form and the housekeeping form.
 async function createItem(fields, files) {
   const { data: row, error } = await sb.from('items').insert({
-    title: fields.title, category: fields.category || guessCat(fields.title), status: 'found',
+    // saying where it is being put away at registration already stores it
+    title: fields.title, category: fields.category || guessCat(fields.title),
+    status: (fields.storage_location || '').trim() ? 'stored' : 'found',
     found_location: fields.found_location || '', storage_location: fields.storage_location || '',
     found_by: fields.found_by || '', found_by_key: nameKey(fields.found_by), source: fields.source || 'app',
   }).select().single();
@@ -516,13 +535,22 @@ function renderDetail() {
     if (st === it.status) return;
     // "Devolvido" must capture who took it — never a silent status flip
     if (st === 'returned') { openReturn(it); return; }
-    saveDetail(st === 'found' || st === 'stored' ? { status: st, notes: stripReturn(it.notes) } : { status: st });
+    if (st !== 'found' && st !== 'stored') { saveDetail({ status: st }); return; }
+    const patch = { status: st, notes: stripReturn(it.notes) };
+    // the other half of the same rule: saying it is NOT stored retires the
+    // location, which would otherwise sit there claiming the opposite
+    if (st === 'found') patch.storage_location = '';
+    saveDetail(patch);
   }));
 
   const store = $('dv-store');
   if (store) store.querySelectorAll('.dv-pill').forEach(b => b.addEventListener('click', () => {
     // tapping the current location again clears it
-    saveDetail({ storage_location: it.storage_location === b.dataset.loc ? '' : b.dataset.loc });
+    const loc = it.storage_location === b.dataset.loc ? '' : b.dataset.loc;
+    const patch = { storage_location: loc };
+    const st = statusForStorage(it, loc);
+    if (st) patch.status = st;                  // moving it is what makes it "Armazenado"
+    saveDetail(patch);
   }));
 
   const cta = $('dv-return');
@@ -673,6 +701,13 @@ $('ed-form').addEventListener('submit', async (e) => {
     description: '',                    // folded into notes, see openEdit
     notes: ret ? withReturn(text, ret) : text,
   };
+
+  // Only when the location actually moved. Saving an unrelated edit must not
+  // quietly overrule a status someone set by hand on the detail sheet.
+  if (patch.storage_location !== (it.storage_location || '')) {
+    const st = statusForStorage(it, patch.storage_location);
+    if (st) patch.status = st;
+  }
 
   $('ed-sending').hidden = false;
   const { error } = await sb.from('items').update(patch).eq('id', it.id);
@@ -864,7 +899,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= Build stamp + self-update ================= */
 // Shown in the navbar so anyone can say which build they are actually running —
 // "it must be cached" is a guess until someone can read the number off screen.
-const BUILD = 'v17';
+const BUILD = 'v18';
 const stamp = $('build'); if (stamp) stamp.textContent = BUILD;
 
 if ('serviceWorker' in navigator) {
