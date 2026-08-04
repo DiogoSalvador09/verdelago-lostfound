@@ -32,15 +32,17 @@ const $ = (id) => document.getElementById(id);
    later a bag on a shelf can be matched back to its record — which is the whole
    reason the number exists.
 
-   It is the row id, dressed up: PA-014. Not a new column, because adding one
+   It is the row id, dressed up: HSK-014. Not a new column, because adding one
    needs the Supabase service key this machine does not hold — and the id is
    already unique, permanent, assigned by the database and never reused, which
    is exactly what a physical label needs. Padded to 3 so every tag written this
    year is the same width on the bag; ids past 999 simply grow a digit. */
-const refCode = (it) => 'PA-' + String((it && it.id) != null ? it.id : '?').padStart(3, '0');
-// "PA-014", "pa 14", "#14" and "14" must all reach item 14 — and nothing else.
+const refCode = (it) => 'HSK-' + String((it && it.id) != null ? it.id : '?').padStart(3, '0');
+// "HSK-014", "hsk 14", "#14" and "14" must all reach item 14 — and nothing else.
+// PA- is still accepted: it was the prefix for the first few hours this shipped,
+// and anything already written on a bag has to keep working.
 const refQuery = (q) => {
-  const n = q.replace(/[^0-9a-z]/gi, '').toLowerCase().replace(/^pa/, '');
+  const n = q.replace(/[^0-9a-z]/gi, '').toLowerCase().replace(/^(hsk|pa)/, '');
   return /^\d+$/.test(n) ? String(parseInt(n, 10)) : null;
 };
 
@@ -862,7 +864,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= Build stamp + self-update ================= */
 // Shown in the navbar so anyone can say which build they are actually running —
 // "it must be cached" is a guess until someone can read the number off screen.
-const BUILD = 'v16';
+const BUILD = 'v17';
 const stamp = $('build'); if (stamp) stamp.textContent = BUILD;
 
 if ('serviceWorker' in navigator) {
