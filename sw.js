@@ -3,8 +3,8 @@
    a stale item list from cache. The cache is only a fallback when offline.
 
    BUMP `CACHE` **and** the ?v= on the assets in index.html on every release. */
-const CACHE = 'verdelago-lf-v18';
-const V = '18';
+const CACHE = 'verdelago-lf-v19';
+const V = '19';
 const SHELL = ['./', './index.html', './style.css?v=' + V, './luxe.css?v=' + V,
   './sbapp.js?v=' + V, './config.js?v=' + V, './logo.svg', './logo-cream.svg', './icon-green.svg'];
 

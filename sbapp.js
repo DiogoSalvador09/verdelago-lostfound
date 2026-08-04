@@ -781,6 +781,15 @@ $('up-again').addEventListener('click', resetUp);
 
 /* ================= Housekeeping (upload-only) ================= */
 let hkFiles = [];
+// Optional, because housekeeping often registers an item in the corridor before
+// it goes anywhere. Left blank the item arrives as "Encontrado"; filled in, the
+// same rule as everywhere else marks it "Armazenado" on the spot, so reception
+// is not left to chase where it went.
+STORES.forEach(s => {
+  const o = document.createElement('option');
+  o.value = s; o.textContent = s || '— ainda não —';
+  $('hk-store').appendChild(o);
+});
 function initHK() {
   $('appwrap').hidden = true; $('hk').hidden = false;
   let name = ''; try { name = localStorage.getItem('hk_name') || ''; } catch (e) {}
@@ -817,7 +826,7 @@ $('hk-form').addEventListener('submit', async (e) => {
   let name = ''; try { name = localStorage.getItem('hk_name') || ''; } catch (e2) {}
   $('hk-sending').hidden = false;
   try {
-    const row = await createItem({ title, found_location: $('hk-loc').value.trim(), found_by: name, source: 'housekeeping' }, hkFiles);
+    const row = await createItem({ title, found_location: $('hk-loc').value.trim(), storage_location: $('hk-store').value, found_by: name, source: 'housekeeping' }, hkFiles);
     recordStaff(name);             // keeps last_seen current
     $('hk-ref').textContent = refCode(row);      // to be written on the bag
 
@@ -899,7 +908,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= Build stamp + self-update ================= */
 // Shown in the navbar so anyone can say which build they are actually running —
 // "it must be cached" is a guess until someone can read the number off screen.
-const BUILD = 'v18';
+const BUILD = 'v19';
 const stamp = $('build'); if (stamp) stamp.textContent = BUILD;
 
 if ('serviceWorker' in navigator) {

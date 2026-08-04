@@ -17,9 +17,9 @@
        so without a changing URL a deploy can stay invisible on staff phones for
        10+ minutes (or until the service worker re-caches the stale copy).
        BUMP THIS TOGETHER WITH `CACHE` IN sw.js ON EVERY RELEASE. -->
-  <link rel="stylesheet" href="./style.css?v=18">
+  <link rel="stylesheet" href="./style.css?v=19">
   <!-- dark-luxe theme; must load AFTER style.css to override the light defaults -->
-  <link rel="stylesheet" href="./luxe.css?v=18">
+  <link rel="stylesheet" href="./luxe.css?v=19">
   <style>
     /* login */
     #login{ position:fixed; inset:0; background:#2E5E4E; color:#fff; display:flex; align-items:center; justify-content:center; padding:26px; z-index:1500; }
@@ -338,7 +338,10 @@
     .hk-pop button{ display:block;width:100%;text-align:left;background:none;border:none;padding:14px 22px;font-size:.95rem;cursor:pointer;font-family:inherit;color:#16241E; }
     .hk-wrap{ max-width:560px;margin:0 auto;padding:18px 16px 60px; }
     #hk label{ display:block;font-size:.82rem;font-weight:600;color:#4a5a50;margin:18px 0 6px; }
-    #hk input[type=text]{ width:100%;box-sizing:border-box;border:1.5px solid #DDE6E0;border-radius:14px;padding:15px 16px;font-size:1.05rem;background:#fff;font-family:inherit; }
+    #hk input[type=text], #hk select{ width:100%;box-sizing:border-box;border:1.5px solid #DDE6E0;border-radius:14px;padding:15px 16px;font-size:1.05rem;background:#fff;font-family:inherit; }
+    /* the only optional field on this form, so it says so rather than looking
+       like something they forgot to fill in */
+    #hk label .opt{ font-weight:500;color:#8A948C; }
 
     /* ── Phone fit ────────────────────────────────────────────────────────────
        "out of proportion… I can scroll with my finger, it's not sitting like an
@@ -578,6 +581,8 @@
           <input type="text" id="hk-title" placeholder="ex. óculos, toalha, carregador" required>
           <label>Onde? (quarto / local)</label>
           <input type="text" id="hk-loc" placeholder="ex. Quarto 214, Piscina">
+          <label>Já o guardaste? <span class="opt">(opcional)</span></label>
+          <select id="hk-store"></select>
           <button type="submit" class="send">Enviar</button>
         </form>
       </div>
@@ -618,7 +623,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js?v=18"></script>
-  <script src="./sbapp.js?v=18" defer></script>
+  <script src="./config.js?v=19"></script>
+  <script src="./sbapp.js?v=19" defer></script>
 </body>
 </html>
