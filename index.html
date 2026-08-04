@@ -17,9 +17,9 @@
        so without a changing URL a deploy can stay invisible on staff phones for
        10+ minutes (or until the service worker re-caches the stale copy).
        BUMP THIS TOGETHER WITH `CACHE` IN sw.js ON EVERY RELEASE. -->
-  <link rel="stylesheet" href="./style.css?v=15">
+  <link rel="stylesheet" href="./style.css?v=16">
   <!-- dark-luxe theme; must load AFTER style.css to override the light defaults -->
-  <link rel="stylesheet" href="./luxe.css?v=15">
+  <link rel="stylesheet" href="./luxe.css?v=16">
   <style>
     /* login */
     #login{ position:fixed; inset:0; background:#2E5E4E; color:#fff; display:flex; align-items:center; justify-content:center; padding:26px; z-index:1500; }
@@ -107,6 +107,9 @@
     .dv-cta{ width:100%;margin:8px 0 4px;background:#2E5E4E;color:#fff;border:none;border-radius:16px;
       padding:17px;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em; }
     .dv-cta:hover{ background:#1E3F34; }
+    .dv-edit{ width:100%;margin:10px 0 4px;background:#FCFBF8;color:#2E5E4E;border:1.5px solid rgba(46,94,78,.28);
+      border-radius:16px;padding:16px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit; }
+    .dv-edit:hover{ border-color:#B8943E;color:#1E3F34; }
     .dv-revert{ display:block;margin:18px auto 0;background:none;border:none;color:#A3ABA5;font-size:.74rem;
       cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px; }
     .dv-revert:hover{ color:#79837C; }
@@ -146,25 +149,54 @@
     .rlog__to{ font-size:.86rem;color:#2E5E4E;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
     .rlog__d{ font-size:.74rem;color:#A3ABA5;margin-top:4px; }
     .rlog__note{ font-size:.76rem;color:#79837C;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-    /* upload sheet */
-    #up{ position:fixed;inset:0;z-index:1100;background:#F4F7F4;overflow-y:auto; }
-    #up[hidden]{ display:none; }
-    #up .top{ background:#2E5E4E;color:#fff;padding:16px 18px calc(16px + env(safe-area-inset-top,0)) ;display:flex;align-items:center;gap:12px; }
-    #up .top b{ font-size:1.05rem; }
+    /* upload sheet — shared with the edit sheet (#ed), which is the same form
+       in a different colour, so the two never drift apart visually */
+    #up, #ed{ position:fixed;inset:0;z-index:1100;background:#F4F7F4;overflow-y:auto; }
+    #up[hidden], #ed[hidden]{ display:none; }
+    #up .top, #ed .top{ background:#2E5E4E;color:#fff;padding:16px 18px calc(16px + env(safe-area-inset-top,0)) ;display:flex;align-items:center;gap:12px; }
+    #up .top b, #ed .top b{ font-size:1.05rem; }
     /* same reason as .dv-back — a bare glyph was too easy to miss */
-    #up .top .x{ margin-left:auto;background:#2E5E4E;border:none;color:#fff;font-size:1.5rem;line-height:1;
+    #up .top .x, #ed .top .x{ margin-left:auto;background:#2E5E4E;border:none;color:#fff;font-size:1.5rem;line-height:1;
       cursor:pointer;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:inherit; }
-    #up .wrap{ max-width:560px;margin:0 auto;padding:18px 16px 60px; }
-    #up label{ display:block;font-size:.82rem;font-weight:600;color:#4a5a50;margin:18px 0 6px; }
-    #up input[type=text], #up select{ width:100%;box-sizing:border-box;border:1.5px solid #DDE6E0;border-radius:14px;padding:15px 16px;font-size:1.05rem;background:#fff;font-family:inherit; }
+    #up .wrap, #ed .wrap{ max-width:560px;margin:0 auto;padding:18px 16px 60px; }
+    #up label, #ed label{ display:block;font-size:.82rem;font-weight:600;color:#4a5a50;margin:18px 0 6px; }
+    #up input[type=text], #up select,
+    #ed input[type=text], #ed input[type=date], #ed select, #ed textarea{ width:100%;box-sizing:border-box;border:1.5px solid #DDE6E0;border-radius:14px;padding:15px 16px;font-size:1.05rem;background:#fff;font-family:inherit; }
+    #ed textarea{ min-height:110px;resize:vertical;line-height:1.5; }
+    #ed .ed-ref{ display:inline-block;margin-bottom:2px;font-size:.72rem;letter-spacing:.16em;color:#B8943E;font-weight:700; }
+    #ed .ed-cancel{ display:block;width:100%;margin-top:12px;background:none;border:none;color:#79837C;
+      font-size:.9rem;padding:12px;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px; }
+
+    /* ── the bag tag ──────────────────────────────────────────────────────
+       The reference housekeeping writes on the bag with a marker, so a bag on
+       a shelf can be matched back to its record. Monospace and wide-tracked:
+       it has to be copied by hand without a 0/O or 1/l mix-up. */
+    .refchip{ display:inline-block;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+      font-size:.74rem;font-weight:700;letter-spacing:.1em;color:#B8943E;
+      background:rgba(184,148,62,.12);border:1px solid rgba(184,148,62,.32);
+      border-radius:7px;padding:3px 9px;white-space:nowrap;user-select:all; }
+    /* as a detail row value it must hug its text — .dv-row__v is flex:1, which
+       would otherwise stretch the chip's background across the whole row */
+    .dv-row__v.refchip{ flex:0 0 auto; }
+    /* on a tile it sits above the title, on the photo's dark gradient */
+    .tile-ref{ display:inline-block;margin-bottom:5px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+      font-size:.65rem;font-weight:700;letter-spacing:.09em;color:#F2E4C1;
+      background:rgba(15,23,20,.5);border-radius:6px;padding:3px 8px; }
+    /* the big number on the "Registado!" screen — the whole point of the
+       confirmation is now that they can read this off and write it down */
+    .done-ref{ text-align:center; }
+    .done-ref__l{ font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;opacity:.8;margin:0 0 8px; }
+    .done-ref__n{ font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:2.6rem;font-weight:800;
+      letter-spacing:.08em;margin:0;line-height:1;user-select:all; }
+    .done-ref__h{ font-size:.85rem;opacity:.8;margin:12px 0 0;max-width:280px; }
     .photo-btn{ display:flex;flex-direction:column;align-items:center;gap:8px;background:#fff;border:2.5px dashed #BCD0C4;border-radius:18px;padding:30px 18px;text-align:center;cursor:pointer;position:relative; }
     .photo-btn svg{ width:44px;height:44px;color:#2E5E4E; } .photo-btn input{ position:absolute;inset:0;opacity:0;width:100%;height:100%; }
     .previews{ display:flex;flex-wrap:wrap;gap:12px;margin-top:12px; } .pwrap{ width:84px;height:84px;border-radius:12px;overflow:hidden;position:relative; } .pwrap img{ width:100%;height:100%;object-fit:cover; }
     .pwrap .rm{ position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;background:#DC2626;color:#fff;border:2px solid #fff;font-size:16px;cursor:pointer; }
     .send{ width:100%;margin-top:26px;background:#2E5E4E;color:#fff;border:none;border-radius:16px;padding:18px;font-size:1.15rem;font-weight:800;cursor:pointer;font-family:inherit; }
     .req::after{ content:' *';color:#DC2626; }
-    #up .overlay{ position:fixed;inset:0;background:rgba(46,94,78,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:5; }
-    #up .overlay[hidden]{ display:none; } .spin{ width:48px;height:48px;border:5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite; } @keyframes sp{ to{ transform:rotate(360deg); } }
+    #up .overlay, #ed .overlay{ position:fixed;inset:0;background:rgba(46,94,78,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:5; }
+    #up .overlay[hidden], #ed .overlay[hidden]{ display:none; } .spin{ width:48px;height:48px;border:5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite; } @keyframes sp{ to{ transform:rotate(360deg); } }
     /* housekeeping upload-only app */
     #hk[hidden]{ display:none; }
     /* ── Onboarding: premium minimalist ─────────────────────────────────────
@@ -441,8 +473,13 @@
     </div>
     <div class="overlay" id="up-sending" hidden><div class="spin"></div><p>A enviar…</p></div>
     <div class="overlay" id="up-done" hidden>
-      <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-      <p style="font-size:1.3rem;font-weight:800;">Registado!</p>
+      <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      <p style="font-size:1.3rem;font-weight:800;margin:0;">Registado!</p>
+      <div class="done-ref">
+        <p class="done-ref__l">Escreva este número no saco</p>
+        <p class="done-ref__n" id="up-ref">—</p>
+        <p class="done-ref__h">É por este número que o artigo é encontrado quando o hóspede o vier reclamar.</p>
+      </div>
       <button class="send" style="max-width:240px;background:#fff;color:#2E5E4E;" id="up-again">Adicionar outro</button>
       <!-- without this the overlay covers the sheet's × and there is no way back -->
       <button class="send" style="max-width:240px;margin-top:10px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.55);font-size:.95rem;" id="up-back">Voltar à lista</button>
@@ -459,6 +496,36 @@
       <span class="dv-top__t" id="dv-top-title"></span>
     </div>
     <div class="dv-wrap" id="dv-body"></div>
+  </div>
+
+  <!-- EDIT SHEET — corrects a record after the fact. Sits above the detail
+       sheet (z 1160 > 1150) so it opens over the item it is editing. -->
+  <div id="ed" hidden style="z-index:1160;">
+    <div class="top"><b>Editar artigo</b><button class="x" id="ed-close">&times;</button></div>
+    <div class="wrap">
+      <form id="ed-form">
+        <span class="ed-ref" id="ed-ref"></span>
+        <label class="req">O que é?</label>
+        <input type="text" id="ed-title" required>
+        <label>Categoria</label>
+        <select id="ed-cat"></select>
+        <label>Local onde foi encontrado</label>
+        <input type="text" id="ed-loc" placeholder="ex. Piscina, Receção">
+        <label>Quarto / Casa</label>
+        <input type="text" id="ed-room" placeholder="ex. A28, V4">
+        <label>Onde está guardado</label>
+        <select id="ed-store"></select>
+        <label>Encontrado por</label>
+        <input type="text" id="ed-by" placeholder="ex. Maria">
+        <label>Data em que foi encontrado</label>
+        <input type="date" id="ed-date">
+        <label>Notas</label>
+        <textarea id="ed-notes" placeholder="Detalhes que ajudem a identificar o artigo"></textarea>
+        <button type="submit" class="send">Guardar alterações</button>
+        <button type="button" class="ed-cancel" id="ed-cancel">Cancelar</button>
+      </form>
+    </div>
+    <div class="overlay" id="ed-sending" hidden><div class="spin"></div><p>A guardar…</p></div>
   </div>
 
   <!-- Android install prompt (appears only when the browser offers it) -->
@@ -516,9 +583,13 @@
       </div>
       <div class="overlay" id="hk-sending" hidden><div class="spin"></div><p>A enviar…</p></div>
       <div class="overlay" id="hk-done" hidden>
-        <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
         <p style="font-size:1.35rem;font-weight:800;margin:0;">Obrigada!</p>
-        <p style="margin:0;opacity:.85;">O artigo foi registado.</p>
+        <div class="done-ref">
+          <p class="done-ref__l">Escreve este número no saco</p>
+          <p class="done-ref__n" id="hk-ref">—</p>
+          <p class="done-ref__h">Assim a receção encontra o artigo quando o hóspede o vier reclamar.</p>
+        </div>
         <button class="send" style="max-width:240px;background:#fff;color:#2E5E4E;" id="hk-again">Adicionar outro</button>
       </div>
     </div>
@@ -547,7 +618,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js?v=15"></script>
-  <script src="./sbapp.js?v=15" defer></script>
+  <script src="./config.js?v=16"></script>
+  <script src="./sbapp.js?v=16" defer></script>
 </body>
 </html>

@@ -27,6 +27,23 @@ const clabel = (c) => CL[c] || c || 'Outros';
 const esc = (s) => String(s == null ? '' : s);
 const $ = (id) => document.getElementById(id);
 
+/* ---------- The bag tag ----------
+   Housekeeping writes this reference on the bag the item goes into, so months
+   later a bag on a shelf can be matched back to its record — which is the whole
+   reason the number exists.
+
+   It is the row id, dressed up: PA-014. Not a new column, because adding one
+   needs the Supabase service key this machine does not hold — and the id is
+   already unique, permanent, assigned by the database and never reused, which
+   is exactly what a physical label needs. Padded to 3 so every tag written this
+   year is the same width on the bag; ids past 999 simply grow a digit. */
+const refCode = (it) => 'PA-' + String((it && it.id) != null ? it.id : '?').padStart(3, '0');
+// "PA-014", "pa 14", "#14" and "14" must all reach item 14 — and nothing else.
+const refQuery = (q) => {
+  const n = q.replace(/[^0-9a-z]/gi, '').toLowerCase().replace(/^pa/, '');
+  return /^\d+$/.test(n) ? String(parseInt(n, 10)) : null;
+};
+
 function guessCat(t) {
   t = (t || '').toLowerCase();
   const m = [
@@ -177,6 +194,10 @@ function updateCounts() {
 }
 function currentList() {
   const q = $('q').value.trim().toLowerCase(), cat = $('catf').value;
+  // Someone standing at the shelf with a labelled bag types the number off it.
+  // Matched against the whole id, never as a substring — otherwise "10" would
+  // hand back everything from 100 to 109 as well.
+  const ref = q ? refQuery(q) : null;
   return ITEMS.filter(it => {
     // an explicit pill means exactly that status; "Todos" means everything still
     // on the shelf, i.e. not already handed back
@@ -184,7 +205,8 @@ function currentList() {
     else if (!onShelf(it)) return false;
     if (cat && it.category !== cat) return false;
     if (!q) return true;
-    return [it.title, it.description, it.found_location, it.found_by, clabel(it.category)].join(' ').toLowerCase().includes(q);
+    if (ref && String(it.id) === ref) return true;
+    return [it.title, it.description, it.found_location, it.found_by, it.linked_room, clabel(it.category)].join(' ').toLowerCase().includes(q);
   });
 }
 function tile(it, idx) {
@@ -201,7 +223,9 @@ function tile(it, idx) {
   const top = document.createElement('div'); top.className = 'item-tile__top';
   top.innerHTML = `<span class="gbadge gbadge--${esc(it.status)}"><span class="gbadge__dot"></span>${SL[it.status] || esc(it.status)}</span>` + (days >= 0 && open ? `<span class="tchip ${tc}">${left <= 0 ? 'Expirado!' : left + 'd'}</span>` : '');
   const bot = document.createElement('div'); bot.className = 'item-tile__bottom';
-  bot.innerHTML = `<div class="item-tile__title"></div><div class="item-tile__meta"></div>`;
+  // the ref leads the tile: scanning the grid against a number written on a bag
+  // is the fastest way to find an item, so it has to be readable without opening
+  bot.innerHTML = `<div class="tile-ref">${refCode(it)}</div><div class="item-tile__title"></div><div class="item-tile__meta"></div>`;
   bot.querySelector('.item-tile__title').textContent = it.title || 'Artigo';
   bot.querySelector('.item-tile__meta').textContent = it.found_location || clabel(it.category);
   a.appendChild(top); a.appendChild(bot);
@@ -394,7 +418,7 @@ function row(k, v, opts) {
   const empty = (v == null || v === '');
   const d = document.createElement('div'); d.className = 'dv-row';
   const kk = document.createElement('span'); kk.className = 'dv-row__k'; kk.textContent = k;
-  const vv = document.createElement('span'); vv.className = 'dv-row__v' + (empty ? ' dv-row__v--muted' : '');
+  const vv = document.createElement('span'); vv.className = 'dv-row__v' + (empty ? ' dv-row__v--muted' : '') + (opts && opts.mono && !empty ? ' refchip' : '');
   vv.textContent = empty ? '—' : String(v);              // textContent: staff-entered text can never inject markup
   d.appendChild(kk); d.appendChild(vv);
   return d.outerHTML;
@@ -431,6 +455,7 @@ function renderDetail() {
     <p class="dv-sub" id="dv-sub"></p>
 
     <div class="dv-card">
+      ${row('Referência', refCode(it), { always: true, mono: true })}
       ${row('Local encontrado', it.found_location, { always: true })}
       ${row('Onde está guardado', it.storage_location, { always: true })}
       ${row('Categoria', clabel(it.category))}
@@ -461,6 +486,7 @@ function renderDetail() {
     <div class="dv-saving" id="dv-saving" hidden>A guardar…</div>
 
     ${active ? `<button class="dv-cta" id="dv-return">Devolver ao hóspede</button>` : ''}
+    <button class="dv-edit" id="dv-edit">Editar informações</button>
 
     <div class="dv-label">Estado</div>
     <div class="dv-pills" id="dv-status">
@@ -499,6 +525,7 @@ function renderDetail() {
 
   const cta = $('dv-return');
   if (cta) cta.addEventListener('click', () => openReturn(it));
+  $('dv-edit').addEventListener('click', () => openEdit(it));
   const rev = $('dv-revert');
   if (rev) rev.addEventListener('click', () => {
     if (!confirm('Reverter a devolução deste artigo?')) return;
@@ -562,7 +589,7 @@ function renderReturns() {
         <div class="rlog__t"></div>
         <div class="rlog__to"></div>
         <div class="rlog__note"></div>
-        <div class="rlog__d">${fmtDate(r && r.when) || fmtDate(i.updated_at) || '—'}</div>
+        <div class="rlog__d">${refCode(i)} · ${fmtDate(r && r.when) || fmtDate(i.updated_at) || '—'}</div>
       </div>
     </div>`;
   }).join('');
@@ -587,6 +614,74 @@ async function saveDetail(patch) {
   Object.assign(it, patch);                       // ITEMS holds the same object reference
   renderDetail(); updateCounts(); renderList();
 }
+
+/* ================= Edit an item ================= */
+/* Records are typed in a hurry, often one-handed on a phone in a corridor, so
+   nearly every one of them needs correcting later: the wrong room, a name spelt
+   differently, a date that was actually yesterday. Everything on this form is a
+   plain column — status, storage and the return record keep their own dedicated
+   controls on the detail sheet and are deliberately not duplicated here. */
+let EDIT = null;
+CATS.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = clabel(c); $('ed-cat').appendChild(o); });
+STORES.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s || '— não definido —'; $('ed-store').appendChild(o); });
+
+function openEdit(it) {
+  EDIT = it;
+  $('ed-ref').textContent = refCode(it);
+  $('ed-title').value = it.title || '';
+  $('ed-cat').value = CATS.includes(it.category) ? it.category : 'Other';
+  $('ed-loc').value = it.found_location || '';
+  $('ed-room').value = it.linked_room || '';
+  $('ed-store').value = STORES.includes(it.storage_location) ? it.storage_location : '';
+  $('ed-by').value = it.found_by || '';
+  // <input type=date> speaks only yyyy-mm-dd; found_date is a date column, but
+  // an imported row can still carry a full timestamp, so keep just the day
+  $('ed-date').value = (it.found_date || '').slice(0, 10);
+  // The detail sheet shows description and notes as one block of text, so the
+  // form edits them as one field too — and saves it all into `notes`, where the
+  // real free text has always lived. The [devolucao] record is stripped out
+  // here and put back on save: staff must never see or edit that raw JSON.
+  $('ed-notes').value = [it.description, stripReturn(it.notes)].filter(Boolean).join('\n\n');
+  $('ed-sending').hidden = true;
+  $('ed').hidden = false;
+  $('ed').scrollTop = 0;
+  pushLayer(() => { $('ed').hidden = true; EDIT = null; });
+}
+$('ed-close').addEventListener('click', closeLayer);
+$('ed-cancel').addEventListener('click', closeLayer);
+
+$('ed-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const it = EDIT; if (!it) return;
+  const title = $('ed-title').value.trim();
+  if (!title) { $('ed-title').focus(); return; }
+  const by = $('ed-by').value.trim();
+  const text = $('ed-notes').value.trim();
+  const ret = parseReturn(it.notes);
+
+  const patch = {
+    title,
+    category: $('ed-cat').value,
+    found_location: $('ed-loc').value.trim(),
+    linked_room: $('ed-room').value.trim(),
+    storage_location: $('ed-store').value,
+    found_by: by,
+    found_by_key: nameKey(by),          // the Equipa view groups on this, not on found_by
+    found_date: $('ed-date').value || it.found_date,
+    description: '',                    // folded into notes, see openEdit
+    notes: ret ? withReturn(text, ret) : text,
+  };
+
+  $('ed-sending').hidden = false;
+  const { error } = await sb.from('items').update(patch).eq('id', it.id);
+  $('ed-sending').hidden = true;
+  if (error) { alert('Não foi possível guardar: ' + (error.message || error)); return; }
+
+  Object.assign(it, patch);             // ITEMS holds the same object reference
+  closeLayer();                         // back to the item, now showing the new values
+  if (DV === it) renderDetail();
+  buildCats(); updateCounts(); renderList();
+});
 
 /* ================= Lightbox ================= */
 let lbSet = [], lbIdx = 0;
@@ -639,7 +734,8 @@ $('up-form').addEventListener('submit', async (e) => {
   const title = $('up-title').value.trim(); if (!title) return;
   $('up-sending').hidden = false;
   try {
-    await createItem({ title, category: $('up-cat').value, found_location: $('up-loc').value.trim(), storage_location: $('up-store').value, found_by: $('up-by').value.trim(), source: 'app' }, selected);
+    const row = await createItem({ title, category: $('up-cat').value, found_location: $('up-loc').value.trim(), storage_location: $('up-store').value, found_by: $('up-by').value.trim(), source: 'app' }, selected);
+    $('up-ref').textContent = refCode(row);      // to be written on the bag
     $('up-sending').hidden = true; $('up-done').hidden = false; await loadItems();
   } catch (err) { $('up-sending').hidden = true; alert('Não foi possível registar: ' + (err.message || err)); }
 });
@@ -684,8 +780,9 @@ $('hk-form').addEventListener('submit', async (e) => {
   let name = ''; try { name = localStorage.getItem('hk_name') || ''; } catch (e2) {}
   $('hk-sending').hidden = false;
   try {
-    await createItem({ title, found_location: $('hk-loc').value.trim(), found_by: name, source: 'housekeeping' }, hkFiles);
+    const row = await createItem({ title, found_location: $('hk-loc').value.trim(), found_by: name, source: 'housekeeping' }, hkFiles);
     recordStaff(name);             // keeps last_seen current
+    $('hk-ref').textContent = refCode(row);      // to be written on the bag
 
     hkFiles = []; $('hk-prev').innerHTML = ''; $('hk-form').reset();
     $('hk-sending').hidden = true; $('hk-done').hidden = false;
@@ -765,7 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= Build stamp + self-update ================= */
 // Shown in the navbar so anyone can say which build they are actually running —
 // "it must be cached" is a guess until someone can read the number off screen.
-const BUILD = 'v15';
+const BUILD = 'v16';
 const stamp = $('build'); if (stamp) stamp.textContent = BUILD;
 
 if ('serviceWorker' in navigator) {
